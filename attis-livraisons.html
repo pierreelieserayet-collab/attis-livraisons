@@ -526,8 +526,8 @@ function Agenda() {
           {LIVREURS.map(l=><button key={l} onClick={()=>setFiltreLivreur(filtreLivreur===l?'':l)} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreLivreur===l?'var(--navy)':'white',color:filtreLivreur===l?'white':'var(--text)',fontSize:'0.78rem',fontWeight:600}}>{l}</button>)}
         </div>
       </div>
-      <div className="agenda-grid">
-        {jours.map(d => {
+      <div className="agenda-grid" style={{gridTemplateColumns:"repeat("+agendaDays.length+",1fr)"}}>
+        {agendaDays.map(d => {
           const k = dateKey(d);
           const g = grouped[k]||{matin:[],apm:[],total:0};
           const badge = dateBadge(d);
