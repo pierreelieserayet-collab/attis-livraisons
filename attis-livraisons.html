@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attis – Suivi des livraisons</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1a2d6b;--navy-mid:#213580;--gold:#e8a030;--bg:#f4f6fb;--bg2:#eaeef8;--border:#d0d8ef;--text:#1a2340;--muted:#6b7a9e;--green:#16a34a;--green-bg:#f0fdf4;--red:#c0392b;--red-bg:#fdf0ee;--sun:#d97706;--sun-bg:#fef3c7;--moon:#2563eb;--moon-bg:#eff6ff;--radius:10px}
+body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.nav{background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:66px;box-shadow:0 2px 12px rgba(26,45,107,0.2);position:sticky;top:0;z-index:100;gap:12px}
+.nav-logo-box{background:white;border-radius:8px;padding:5px 10px;display:flex;align-items:center;box-shadow:0 1px 6px rgba(0,0,0,0.18)}
+.nav-tagline{color:rgba(255,255,255,0.45);font-size:0.68rem;letter-spacing:0.04em;margin-left:10px}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{padding:7px 13px;border-radius:7px;border:none;cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:0.82rem;font-weight:600;transition:all 0.18s;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.65)}
+.nav-tab:hover{background:rgba(255,255,255,0.15);color:#fff}
+.nav-tab.active{background:var(--gold);color:#122057}
+.nav-role-badge{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.8);font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.btn-logout{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:0.78rem;font-weight:600}
+.btn-logout:hover{background:rgba(255,255,255,0.1);color:white}
+.page{max-width:920px;margin:0 auto;padding:32px 18px}
+.page-adv{max-width:580px}
+.page-agenda{max-width:1100px}
+.page-hero{background:linear-gradient(135deg,var(--navy) 70%,var(--navy-mid));color:white;border-radius:var(--radius);padding:26px 28px;margin-bottom:24px;position:relative;overflow:hidden}
+.page-hero h2{font-size:1.45rem;margin-bottom:5px;font-weight:700}
+.page-hero p{color:rgba(255,255,255,0.62);font-size:0.86rem}
+.hero-stats{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.hstat{font-size:0.82rem;font-weight:600}
+.flash{padding:11px 16px;border-radius:8px;margin-bottom:16px;font-size:0.88rem;font-weight:600}
+.flash-ok{background:var(--green-bg);color:var(--green);border:1px solid #86efac}
+.flash-error{background:var(--red-bg);color:var(--red);border:1px solid #f1b9b3}
+.card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.card-title{font-size:0.82rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:16px}
+.form-card{margin-bottom:24px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+.field label{display:block;font-size:0.73rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
+input,select{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:'Source Sans 3',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.18s}
+input:focus,select:focus{border-color:var(--navy);background:white}
+input::placeholder{color:#b0bbd4}
+.toggle-group{display:flex;gap:7px;flex-wrap:wrap}
+.toggle-btn{flex:0 0 auto;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:0.83rem;font-weight:600;transition:all 0.18s;min-width:72px;text-align:center}
+.toggle-btn:hover{border-color:var(--navy);color:var(--navy)}
+.toggle-btn.active{background:var(--navy);border-color:var(--navy);color:white}
+.toggle-btn .badge-today{background:#e8a030;color:white;font-size:0.6rem;padding:1px 5px;border-radius:4px;font-weight:700}
+.toggle-btn .badge-tomorrow{background:#2563eb;color:white;font-size:0.6rem;padding:1px 5px;border-radius:4px;font-weight:700}
+.form-actions{display:flex;justify-content:flex-end;gap:10px}
+.btn-primary{padding:10px 22px;border-radius:8px;border:none;cursor:pointer;background:var(--navy);color:white;font-family:'Source Sans 3',sans-serif;font-size:0.9rem;font-weight:700;transition:all 0.18s;white-space:nowrap}
+.btn-primary:hover{background:var(--navy-mid)}
+.btn-ghost{padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:0.88rem;font-weight:600;transition:all 0.18s}
+.btn-ghost:hover{border-color:var(--navy);color:var(--navy)}
+.btn-danger{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--red);color:white;font-family:'Source Sans 3',sans-serif;font-size:0.88rem;font-weight:700}
+.btn-status{padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-family:'Source Sans 3',sans-serif;font-size:0.78rem;font-weight:700;transition:all 0.18s}
+.btn-status-confirm{background:#f0fdf4;color:var(--green);border:1px solid #86efac}
+.btn-status-confirm:hover{background:var(--green);color:white}
+.btn-status-undo{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.btn-status-undo:hover{background:#d97706;color:white}
+.btn-deliver{width:100%;padding:14px;border-radius:9px;border:none;cursor:pointer;background:var(--navy);color:white;font-family:'Source Sans 3',sans-serif;font-size:1rem;font-weight:700;transition:all 0.18s;margin-bottom:8px}
+.btn-deliver:hover{background:var(--navy-mid)}
+.btn-confirm-load{width:100%;padding:14px;border-radius:9px;border:none;cursor:pointer;background:#d97706;color:white;font-family:'Source Sans 3',sans-serif;font-size:1rem;font-weight:700;transition:all 0.18s;margin-bottom:8px}
+.btn-confirm-load:hover{background:#b45309}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:700}
+.pill-sun{background:var(--sun-bg);color:var(--sun)}
+.pill-moon{background:var(--moon-bg);color:var(--moon)}
+.planning-wrap{display:flex;flex-direction:column;gap:8px}
+.day-block{background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.day-label{padding:9px 16px;font-size:0.73rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:white;background:var(--navy);border-bottom:3px solid var(--gold);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.day-count{background:rgba(255,255,255,0.2);padding:1px 7px;border-radius:10px;font-size:0.7rem}
+.day-badge-today{background:#e8a030;color:#122057;font-size:0.65rem;padding:2px 7px;border-radius:4px;font-weight:800}
+.day-badge-tomorrow{background:#3b82f6;color:white;font-size:0.65rem;padding:2px 7px;border-radius:4px;font-weight:800}
+.row-delivery{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--bg2);transition:background 0.12s;flex-wrap:wrap}
+.row-delivery:last-child{border-bottom:none}
+.row-delivery:hover{background:var(--bg)}
+.cmd-mono{font-family:'Courier New',monospace;font-size:0.9rem;font-weight:700;color:var(--navy);min-width:100px}
+.row-actions{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.icon-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.8rem;transition:all 0.15s}
+.icon-btn:hover{border-color:var(--navy);color:var(--navy);background:var(--bg2)}
+.icon-btn.red:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.empty{padding:50px;text-align:center;color:var(--muted);font-size:0.9rem;background:white;border:1px solid var(--border);border-radius:var(--radius)}
+.search-card{margin-bottom:20px}
+.search-row{display:flex;gap:10px}
+.search-input{font-family:'Courier New',monospace !important;font-size:0.97rem !important;font-weight:700 !important}
+.result-card{display:flex;align-items:flex-start;gap:16px}
+.result-ok{border-color:#86efac}
+.result-ko{border-color:#f1b9b3}
+.result-check{width:40px;height:40px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:900;flex-shrink:0}
+.result-x{width:40px;height:40px;border-radius:50%;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:900;flex-shrink:0}
+.result-cmd{font-family:'Courier New',monospace;font-size:1.15rem;font-weight:700;color:var(--navy);margin-bottom:10px}
+.result-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.result-block{display:flex;flex-direction:column;gap:3px}
+.result-sep{width:1px;height:34px;background:var(--border)}
+.rlabel{font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em}
+.rvalue{font-size:0.93rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px}
+.hint{color:var(--muted);font-size:0.82rem;margin-top:4px}
+.sig-preview{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.delivered-msg{background:#f0fdf4;color:var(--green);border:1px solid #86efac;padding:12px 16px;border-radius:8px;font-weight:700;font-size:0.9rem;text-align:center}
+.overlay{position:fixed;inset:0;background:rgba(26,45,107,0.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal{background:white;border-radius:var(--radius);padding:24px;max-width:340px;width:100%;box-shadow:0 8px 40px rgba(26,45,107,0.25)}
+.modal p{margin-bottom:18px;font-size:0.95rem;font-weight:600}
+.modal-btns{display:flex;justify-content:flex-end;gap:10px}
+.sig-modal{max-width:480px}
+.sig-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.sig-title{font-size:1rem;font-weight:700;color:var(--navy)}
+.sig-cmd{font-family:'Courier New',monospace;font-size:0.88rem;color:var(--muted)}
+.sig-hint{font-size:0.82rem;color:var(--muted);margin-bottom:14px}
+.sig-box{border:2px dashed var(--border);border-radius:8px;overflow:hidden;background:#fafbfd;margin-bottom:16px}
+.sig-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.agenda-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media(max-width:900px){.agenda-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.agenda-grid{grid-template-columns:repeat(2,1fr)}}
+.agenda-col{background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.agenda-col-empty{opacity:0.48}
+.agenda-day-header{background:var(--navy);border-bottom:3px solid var(--gold);padding:10px 12px}
+.agenda-day-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.agenda-day-name{color:white;font-size:0.76rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em}
+.agenda-day-count{background:var(--gold);color:#122057;font-size:0.68rem;font-weight:800;padding:1px 7px;border-radius:10px}
+.agenda-day-date{color:rgba(255,255,255,0.65);font-size:0.7rem}
+.agenda-day-badge{display:inline-block;font-size:0.62rem;padding:1px 6px;border-radius:4px;font-weight:800;margin-top:2px}
+.agenda-empty-slot{padding:28px 12px;text-align:center;color:#c0cce0;font-size:1.3rem;flex:1;display:flex;align-items:center;justify-content:center}
+.agenda-slots{padding:10px 10px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
+.agenda-creneau-label{display:flex;align-items:center;gap:5px;font-size:0.67rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px}
+.agenda-label-matin{color:var(--sun)}
+.agenda-label-apm{color:var(--moon)}
+.agenda-no-delivery{font-size:0.73rem;color:#c0cce0;padding:2px 0 4px 2px;font-style:italic}
+.agenda-divider{height:1px;background:var(--bg2);margin:6px 0}
+.agenda-card{border-radius:6px;padding:6px 8px;border-left:3px solid transparent;display:flex;flex-direction:column;gap:4px}
+.agenda-card-aplanifier{background:#f5f3ff;border-left-color:#7c3aed}
+.agenda-card-planifiee{background:#eff6ff;border-left-color:#2563eb}
+.agenda-card-confirmee{background:#fffbeb;border-left-color:#d97706}
+.agenda-card-livree{background:#f0fdf4;border-left-color:#16a34a}
+.agenda-cmd{font-family:'Courier New',monospace;font-size:0.76rem;font-weight:700;color:var(--navy)}
+.login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0e1d4a 0%,#1a2d6b 50%,#213580 100%);padding:20px}
+.login-card{background:white;border-radius:16px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.35);display:flex;flex-direction:column;align-items:center}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shake 0.45s ease}
+.login-logo{margin-bottom:20px}
+.login-divider{width:100%;height:1px;background:#e8edf8;margin-bottom:24px}
+.login-icon{width:52px;height:52px;border-radius:14px;background:#eff6ff;color:#1a2d6b;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.login-title{font-size:1.3rem;color:#1a2d6b;margin-bottom:6px;text-align:center;font-weight:700}
+.login-sub{font-size:0.84rem;color:#6b7a9e;text-align:center;margin-bottom:24px}
+.login-input{width:100%;padding:13px 16px;border-radius:10px;border:2px solid #d0d8ef;background:#f4f6fb;font-family:'Courier New',monospace;font-size:1.05rem;font-weight:700;letter-spacing:0.08em;text-align:center;outline:none;transition:border-color 0.18s;margin-bottom:8px;color:#1a2d6b}
+.login-input:focus{border-color:#1a2d6b;background:white}
+.login-input-error{border-color:#c0392b !important;background:#fdf0ee !important}
+.login-error{color:#c0392b;font-size:0.82rem;font-weight:600;margin-bottom:8px;text-align:center}
+.btn-login{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;background:#1a2d6b;color:white;font-family:'Source Sans 3',sans-serif;font-size:0.95rem;font-weight:700;margin-top:8px;transition:all 0.18s}
+.btn-login:hover{background:#213580}
+.loading{display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--muted);font-size:0.9rem}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, createContext, useContext } = React;
+
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(
+  'https://hkicyucebizazhqcvfht.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhraWN5dWNlYml6YXpocWN2Zmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MDM0OTMsImV4cCI6MjA5NjI3OTQ5M30.WFGPyzBzUjwQz0sFx864rUIpr_BRTGU-9dPuUFRNgBg'
+);
+const getLivraisons = async () => { const {data,error} = await sb.from('livraisons').select('*').order('created_at',{ascending:false}); if(error)throw error; return data; };
+const addLivraison = async ({commande,jour,creneau,tournee,client,statut}) => { const {data,error} = await sb.from('livraisons').insert([{commande:commande.toUpperCase(),jour,creneau,tournee:tournee||'',client:client||'',statut:statut||'planifiee'}]).select(); if(error)throw error; return data[0]; };
+const updateLivraison = async (id,updates) => { const {data,error} = await sb.from('livraisons').update(updates).eq('id',id).select(); if(error)throw error; return data[0]; };
+const deleteLivraison = async (id) => { const {error} = await sb.from('livraisons').delete().eq('id',id); if(error)throw error; };
+const deleteManyByStatut = async (statut) => {
+  const {error} = await sb.from('livraisons').delete().eq('statut', statut);
+  if(error) throw error;
+};
+
+const getLivraisonByCommande = async (commande) => { const {data,error} = await sb.from('livraisons').select('*').eq('commande',commande.toUpperCase()); if(error)throw error; return data; };
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+const GROUPS = {
+  ADV:   {role:'adv',        label:'ADV',                     pages:['suivi','agenda']},
+  WICKY: {role:'responsable',label:'Responsable des tournées', pages:['suivi','agenda','tournees','livreur']},
+  ROUTE: {role:'livreur',    label:'Livreur',                  pages:['livreur']},
+};
+const AuthCtx = createContext(null);
+function AuthProvider({children}) {
+  const [session,setSession] = useState(() => { try { const s=sessionStorage.getItem('attis-s'); return s?JSON.parse(s):null; } catch{return null;} });
+  const login = (code) => { const g=GROUPS[code.trim().toUpperCase()]; if(!g)return false; const s={code:code.trim().toUpperCase(),...g}; setSession(s); sessionStorage.setItem('attis-s',JSON.stringify(s)); return true; };
+  const logout = () => { setSession(null); sessionStorage.removeItem('attis-s'); };
+  return <AuthCtx.Provider value={{session,login,logout}}>{children}</AuthCtx.Provider>;
+}
+const useAuth = () => useContext(AuthCtx);
+
+// ── Date utilities ────────────────────────────────────────────────────────────
+const JOUR_NOMS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MOIS_NOMS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+
+function getJoursOuvres() {
+  const jours = [];
+  const auj = new Date(); auj.setHours(0,0,0,0);
+  let d = new Date(auj);
+  while(jours.length < 6) {
+    if(d.getDay() !== 0 && d.getDay() !== 6) jours.push(new Date(d));
+    d.setDate(d.getDate()+1);
+  }
+  return jours;
+}
+
+function dateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const j = String(date.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+j;
+}
+
+function dateBadge(date) {
+  const auj = new Date(); auj.setHours(0,0,0,0);
+  const dem = new Date(auj); dem.setDate(auj.getDate()+1);
+  if(date.getTime()===auj.getTime()) return {text:"Aujourd'hui", color:'#e8a030'};
+  if(date.getTime()===dem.getTime()) return {text:'Demain', color:'#2563eb'};
+  return null;
+}
+
+function dateLabel(date) {
+  return JOUR_NOMS[date.getDay()]+' '+date.getDate()+' '+MOIS_NOMS[date.getMonth()];
+}
+
+function dateLabelCourt(date) {
+  return JOUR_NOMS[date.getDay()].slice(0,3)+' '+date.getDate()+'/'+String(date.getMonth()+1).padStart(2,'0');
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const SLOTS = ['Matin','Après-midi'];
+const LIVREURS = ['Manjula','George','Vladimir','Said','Houssem','Extérieur','Autre'];
+const STATUS = {
+  aplanifier:{label:'À planifier', color:'#7c3aed',bg:'#f5f3ff',border:'#c4b5fd',dot:'#7c3aed'},
+  planifiee: {label:'Planifiée',   color:'#2563eb',bg:'#eff6ff',border:'#bfdbfe',dot:'#2563eb'},
+  confirmee: {label:'Confirmée',   color:'#d97706',bg:'#fffbeb',border:'#fcd34d',dot:'#d97706'},
+  livree:    {label:'Livrée',      color:'#16a34a',bg:'#f0fdf4',border:'#86efac',dot:'#16a34a'},
+};
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+const SunIcon = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+const MoonIcon = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>;
+const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>;
+
+// ── Logo ──────────────────────────────────────────────────────────────────────
+const AttisLogo = ({size=1}) => (
+  <svg width={130*size} height={48*size} viewBox="0 0 130 48" fill="none">
+    <text x="0" y="36" fontFamily="'Arial Black',Arial,sans-serif" fontWeight="900" fontSize="40" fill="#1a2d6b" letterSpacing="-1">A</text>
+    <text x="28" y="36" fontFamily="'Arial Black',Arial,sans-serif" fontWeight="900" fontSize="40" fill="#1a2d6b" letterSpacing="-1">tt</text>
+    <circle cx="80" cy="8" r="5" fill="#c8922a"/>
+    <text x="74" y="36" fontFamily="'Arial Black',Arial,sans-serif" fontWeight="900" fontSize="40" fill="#1a2d6b" letterSpacing="-1">is</text>
+    <text x="0" y="47" fontFamily="Arial,sans-serif" fontWeight="400" fontSize="9" fill="#1a2d6b" letterSpacing="0.3">La référence Food Packaging</text>
+  </svg>
+);
+
+const StatusBadge = ({s}) => {
+  const st = STATUS[s]||STATUS.planifiee;
+  return <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 10px',borderRadius:20,fontSize:'0.77rem',fontWeight:700,background:st.bg,color:st.color,border:`1px solid ${st.border}`}}><span style={{width:6,height:6,borderRadius:'50%',background:st.dot,display:'inline-block'}}/>{st.label}</span>;
+};
+
+// ── SignaturePad ──────────────────────────────────────────────────────────────
+function SignaturePad({onSave,onCancel,commande}) {
+  const canvasRef = useRef(null);
+  const drawing = useRef(false);
+  const lastPos = useRef(null);
+  const getPos = (e,canvas) => { const rect=canvas.getBoundingClientRect(); const src=e.touches?e.touches[0]:e; return {x:src.clientX-rect.left,y:src.clientY-rect.top}; };
+  const start = (e) => { e.preventDefault(); drawing.current=true; lastPos.current=getPos(e,canvasRef.current); };
+  const move = (e) => { e.preventDefault(); if(!drawing.current)return; const canvas=canvasRef.current; const ctx=canvas.getContext('2d'); const pos=getPos(e,canvas); ctx.beginPath(); ctx.moveTo(lastPos.current.x,lastPos.current.y); ctx.lineTo(pos.x,pos.y); ctx.strokeStyle='#1a2d6b'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke(); lastPos.current=pos; };
+  const stop = (e) => { e.preventDefault(); drawing.current=false; };
+  const clear = () => { const c=canvasRef.current; c.getContext('2d').clearRect(0,0,c.width,c.height); };
+  const isEmpty = () => !canvasRef.current.getContext('2d').getImageData(0,0,canvasRef.current.width,canvasRef.current.height).data.some(v=>v!==0);
+  const save = () => { if(isEmpty()){alert('Veuillez apposer une signature.');return;} onSave(canvasRef.current.toDataURL('image/png')); };
+  useEffect(() => { const c=canvasRef.current; c.width=c.parentElement.clientWidth-48; c.height=180; },[]);
+  return (
+    <div className="overlay">
+      <div className="modal sig-modal">
+        <div className="sig-header"><div className="sig-title">Signature du client</div><div className="sig-cmd">{commande}</div></div>
+        <p className="sig-hint">Faites signer le client dans le cadre ci-dessous</p>
+        <div className="sig-box"><canvas ref={canvasRef} onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop} onTouchStart={start} onTouchMove={move} onTouchEnd={stop} style={{cursor:'crosshair',display:'block',touchAction:'none'}}/></div>
+        <div className="sig-actions">
+          <button className="btn-ghost" onClick={clear}>Effacer</button>
+          <button className="btn-ghost" onClick={onCancel}>Annuler</button>
+          <button className="btn-primary" onClick={save}>Valider ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function Login() {
+  const {login} = useAuth();
+  const [code,setCode] = useState('');
+  const [error,setError] = useState(false);
+  const [shake,setShake] = useState(false);
+  const handleLogin = () => {
+    const ok = login(code);
+    if(!ok){ setError(true); setShake(true); setTimeout(()=>setShake(false),500); setTimeout(()=>setError(false),3000); }
+  };
+  return (
+    <div className="login-bg">
+      <div className={`login-card ${shake?'shake':''}`}>
+        <div className="login-logo"><AttisLogo size={1.1}/></div>
+        <div className="login-divider"/>
+        <div className="login-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <h2 className="login-title">Accès sécurisé</h2>
+        <p className="login-sub">Saisissez votre code d'accès pour continuer</p>
+        <input className={`login-input ${error?'login-input-error':''}`} placeholder="Code d'accès" value={code} onChange={e=>{setCode(e.target.value);setError(false);}} onKeyDown={e=>e.key==='Enter'&&handleLogin()} autoFocus autoComplete="off"/>
+        {error&&<div className="login-error">Code incorrect. Veuillez réessayer.</div>}
+        <button className="btn-login" onClick={handleLogin}>Se connecter</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Suivi ─────────────────────────────────────────────────────────────────────
+function Suivi() {
+  const [query,setQuery] = useState('');
+  const [result,setResult] = useState(null);
+  const [searched,setSearched] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const handleSearch = async () => {
+    if(!query.trim())return; setLoading(true);
+    try { const data=await getLivraisonByCommande(query.trim()); setResult(data[0]||null); setSearched(true); } catch(e){console.error(e);} finally{setLoading(false);}
+  };
+  const formatJour = (key) => {
+    if(!key)return key;
+    const d = new Date(key+'T00:00:00');
+    return dateLabel(d);
+  };
+  return (
+    <div className="page page-adv">
+      <div className="page-hero"><h2>Suivi de commande</h2><p>Saisissez un numéro de commande pour connaître sa date et son statut</p></div>
+      <div className="card search-card">
+        <div className="card-title">🔍 Rechercher une commande</div>
+        <div className="search-row">
+          <input className="search-input" placeholder="Numéro de commande…" value={query} onChange={e=>{setQuery(e.target.value);setSearched(false);setResult(null);}} onKeyDown={e=>e.key==='Enter'&&handleSearch()}/>
+          <button className="btn-primary" onClick={handleSearch} disabled={loading}>{loading?'…':'Rechercher'}</button>
+        </div>
+      </div>
+      {searched&&(
+        <div className={`result-card card ${result?'result-ok':'result-ko'}`}>
+          {result?(
+            <><div className="result-check">✓</div>
+            <div style={{flex:1}}>
+              <div className="result-cmd">{result.commande}</div>
+              <div className="result-row">
+                <div className="result-block"><span className="rlabel">Jour</span><span className="rvalue">{formatJour(result.jour)}</span></div>
+                <div className="result-sep"/>
+                <div className="result-block"><span className="rlabel">Créneau</span><span className={`rvalue pill ${result.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{result.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span></div>
+                <div className="result-sep"/>
+                <div className="result-block"><span className="rlabel">Statut</span><StatusBadge s={result.statut}/></div>
+              </div>
+              {result.statut==='livree'&&result.signature&&<div className="sig-preview"><div className="rlabel" style={{marginBottom:6}}>Signature</div><img src={result.signature} alt="Signature" style={{maxWidth:200,border:'1px solid #d0d8ef',borderRadius:6}}/></div>}
+            </div></>
+          ):(
+            <><div className="result-x">✗</div><div><p><strong>{query.trim().toUpperCase()}</strong> — introuvable.</p><p className="hint">Vérifiez le numéro ou contactez le responsable.</p></div></>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Agenda ────────────────────────────────────────────────────────────────────
+function Agenda() {
+  const [deliveries,setDeliveries] = useState([]);
+  const [loading,setLoading] = useState(true);
+  useEffect(()=>{ getLivraisons().then(setDeliveries).catch(console.error).finally(()=>setLoading(false)); },[]);
+
+  const jours = getJoursOuvres();
+  const grouped = {};
+  jours.forEach(j => { const k=dateKey(j); grouped[k]={matin:deliveries.filter(d=>d.jour===k&&d.creneau==='Matin'&&d.statut!=='aplanifier'),apm:deliveries.filter(d=>d.jour===k&&d.creneau==='Après-midi'&&d.statut!=='aplanifier')}; grouped[k].total=grouped[k].matin.length+grouped[k].apm.length; });
+
+  const counts = {aplanifier:0,planifiee:0,confirmee:0,livree:0};
+  deliveries.forEach(d=>{if(counts[d.statut]!==undefined)counts[d.statut]++;});
+
+  if(loading)return <div className="loading">Chargement…</div>;
+  return (
+    <div className="page page-agenda">
+      <div className="page-hero">
+        <h2>📅 Agenda de la semaine</h2><p>Vue d'ensemble du planning de livraison</p>
+        <div className="hero-stats">
+          <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
+          <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {deliveries.length}</span>
+        </div>
+      </div>
+      <div className="agenda-grid">
+        {jours.map(d => {
+          const k = dateKey(d);
+          const g = grouped[k]||{matin:[],apm:[],total:0};
+          const badge = dateBadge(d);
+          return (
+            <div key={k} className={`agenda-col ${g.total===0?'agenda-col-empty':''}`}>
+              <div className="agenda-day-header">
+                <div className="agenda-day-top">
+                  <span className="agenda-day-name">{JOUR_NOMS[d.getDay()].slice(0,3)} {d.getDate()}</span>
+                  {g.total>0&&<span className="agenda-day-count">{g.total}</span>}
+                </div>
+                <div className="agenda-day-date">{MOIS_NOMS[d.getMonth()]}</div>
+                {badge&&<span className="agenda-day-badge" style={{background:badge.color,color:'white'}}>{badge.text}</span>}
+              </div>
+              {g.total===0?<div className="agenda-empty-slot">—</div>:(
+                <div className="agenda-slots">
+                  <div className="agenda-creneau-label agenda-label-matin"><SunIcon/> Matin</div>
+                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={`agenda-card agenda-card-${d.statut}`}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/></div>)}
+                  <div className="agenda-divider"/>
+                  <div className="agenda-creneau-label agenda-label-apm"><MoonIcon/> Après-midi</div>
+                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={`agenda-card agenda-card-${d.statut}`}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/></div>)}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Import AS400 ─────────────────────────────────────────────────────────────
+function ImportAS400({ deliveries, onImport }) {
+  const [importing, setImporting] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const fileRef = useRef(null);
+
+  const parseDate = (val) => {
+    // Format AS400 : 20260707 → "2026-07-07"
+    const s = String(val);
+    if(s.length === 8) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+    return null;
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        
+        // Filtrer les lignes type "1" (entêtes commandes)
+        const existingNums = new Set(deliveries.map(d => String(d.commande)));
+        const parsed = [];
+        
+        for(const row of rows) {
+          if(String(row[0]) !== '1') continue; // uniquement les entêtes
+          const num = String(row[4]); // N° commande
+          const client = String(row[7]||'').trim(); // Désignation client
+          const dateRaw = row[14]; // Délai confirmé
+          const jour = parseDate(dateRaw);
+          
+          if(!num || num==='undefined') continue;
+          if(existingNums.has(num)) continue; // deja dans l app
+          if(!jour) continue;
+          
+          parsed.push({ commande: num, client, jour });
+        }
+        
+        setPreview(parsed);
+      } catch(err) {
+        alert('Erreur lors de la lecture du fichier : '+err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ''; // reset input
+  };
+
+  const handleImport = async () => {
+    if(!preview||preview.length===0) return;
+    setImporting(true);
+    const imported = [];
+    let skipped = 0;
+    try {
+      for(const p of preview) {
+        try {
+          const created = await addLivraison({commande:p.commande, jour:p.jour, creneau:'', tournee:'', client:p.client, statut:'aplanifier'});
+          imported.push(created);
+        } catch(err) {
+          // Doublon ou autre erreur sur cette commande -> on passe à la suivante
+          skipped++;
+        }
+      }
+      onImport(imported);
+      setPreview(null);
+    } catch(err) {
+      alert('Erreur import : '+err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const formatJourPreview = (key) => {
+    const d = new Date(key+'T00:00:00');
+    return dateLabel(d);
+  };
+
+  return (
+    <div className="card form-card" style={{borderLeft:'4px solid var(--gold)'}}>
+      <div className="card-title">📥 Import AS400</div>
+      
+      {!preview && (
+        <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <p style={{fontSize:'0.85rem',color:'var(--muted)',flex:1}}>
+            Importez votre fichier Excel AS400 pour créer automatiquement les commandes. Le créneau et la tournée seront à compléter ensuite.
+          </p>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:'none'}} onChange={handleFile}/>
+          <button className="btn-primary" style={{background:'var(--gold)',color:'#122057'}} onClick={()=>fileRef.current.click()}>
+            📂 Choisir un fichier Excel
+          </button>
+        </div>
+      )}
+
+      {preview && (
+        <>
+          <div style={{marginBottom:14}}>
+            <p style={{fontSize:'0.88rem',fontWeight:600,color:'var(--navy)',marginBottom:4}}>
+              {preview.length} commande{preview.length>1?'s':''} à importer
+              {preview.length===0 && ' (toutes deja presentes)'}
+            </p>
+            <p style={{fontSize:'0.78rem',color:'var(--muted)'}}>Le créneau et la tournée sont à compléter après l’import.</p>
+          </div>
+
+          {preview.length > 0 && (
+            <div style={{maxHeight:240,overflowY:'auto',border:'1px solid var(--border)',borderRadius:8,marginBottom:14}}>
+              {preview.map((p,i) => (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'9px 14px',borderBottom:'1px solid var(--bg2)',fontSize:'0.85rem'}}>
+                  <span style={{fontFamily:'Courier New',fontWeight:700,color:'var(--navy)',minWidth:80}}>{p.commande}</span>
+                  <span style={{flex:1,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.client}</span>
+                  <span style={{color:'var(--muted)',whiteSpace:'nowrap',fontSize:'0.78rem'}}>{formatJourPreview(p.jour)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+            <button className="btn-ghost" onClick={()=>setPreview(null)}>Annuler</button>
+            {preview.length > 0 && (
+              <button className="btn-primary" onClick={handleImport} disabled={importing}>
+                {importing ? 'Import en cours…' : 'Importer ' + preview.length + ' commande' + (preview.length>1?'s':'')}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Suppression en masse ─────────────────────────────────────────────────────
+function BulkDelete({ deliveries, onDeleted }) {
+  const [confirm, setConfirm] = useState(null); // statut à supprimer
+
+  const STATUTS = [
+    {key:'aplanifier', label:'À planifier',  color:'#7c3aed'},
+    {key:'planifiee',  label:'Planifiées',    color:'#2563eb'},
+    {key:'confirmee',  label:'Confirmées',    color:'#d97706'},
+    {key:'livree',     label:'Livrées',       color:'#16a34a'},
+  ];
+
+  const countByStatut = (key) => deliveries.filter(d => d.statut === key).length;
+
+  const handleDelete = async () => {
+    try {
+      await deleteManyByStatut(confirm);
+      onDeleted(confirm);
+      setConfirm(null);
+    } catch(e) {
+      alert('Erreur : ' + e.message);
+    }
+  };
+
+  return (
+    <>
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',background:'white',border:'1px solid var(--border)',borderRadius:'var(--radius)',marginBottom:24,flexWrap:'wrap'}}>
+        <span style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>🗑️ Supprimer tout :</span>
+        {STATUTS.map(s => {
+          const count = countByStatut(s.key);
+          return (
+            <button key={s.key} className="btn-ghost"
+              style={{padding:'4px 12px',fontSize:'0.78rem',opacity:count===0?0.35:1,display:'flex',gap:6,alignItems:'center'}}
+              disabled={count===0}
+              onClick={() => setConfirm(s.key)}>
+              <span style={{color:s.color,fontWeight:700}}>{s.label}</span>
+              <span style={{background:'var(--bg2)',borderRadius:10,padding:'0 6px',fontSize:'0.72rem'}}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {confirm && (
+        <div className="overlay" onClick={() => setConfirm(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <p>Supprimer les {countByStatut(confirm)} commande{countByStatut(confirm)>1?'s':''} avec le statut <strong>{STATUTS.find(s=>s.key===confirm)?.label}</strong> ?</p>
+            <p style={{fontSize:'0.82rem',color:'var(--muted)',marginBottom:18}}>Cette action est irréversible.</p>
+            <div className="modal-btns">
+              <button className="btn-ghost" onClick={() => setConfirm(null)}>Annuler</button>
+              <button className="btn-danger" onClick={handleDelete}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Modal Planifier ──────────────────────────────────────────────────────────
+function PlanifierModal({ commande, onConfirm, onCancel }) {
+  const [creneau, setCreneau] = useState('');
+  const [tournee, setTournee] = useState('');
+
+  const handleConfirm = () => {
+    if(!creneau || !tournee) { alert('Veuillez choisir un créneau et une tournée.'); return; }
+    onConfirm(creneau, tournee);
+  };
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="modal" style={{maxWidth:420}} onClick={e => e.stopPropagation()}>
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}}>Planifier la commande</div>
+          <div style={{fontFamily:'Courier New',fontSize:'1.1rem',fontWeight:700,color:'var(--navy)'}}>{commande}</div>
+        </div>
+
+        <div className="field" style={{marginBottom:16}}>
+          <label>Créneau</label>
+          <div className="toggle-group">
+            {['Matin','Après-midi'].map(s => (
+              <button key={s} className={'toggle-btn ' + (creneau===s?'active':'')} onClick={() => setCreneau(s)}>
+                {s === 'Matin' ? '☀️ Matin' : '🌙 Après-midi'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field" style={{marginBottom:20}}>
+          <label>Tournée</label>
+          <div className="toggle-group" style={{flexWrap:'wrap'}}>
+            {LIVREURS.map(l => (
+              <button key={l} className={'toggle-btn ' + (tournee===l?'active':'')} onClick={() => setTournee(l)}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="modal-btns">
+          <button className="btn-ghost" onClick={onCancel}>Annuler</button>
+          <button className="btn-primary" onClick={handleConfirm}>✓ Planifier</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tournees ──────────────────────────────────────────────────────────────────
+function Tournees() {
+  const [deliveries,setDeliveries] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [form,setForm] = useState({commande:'',jour:'',creneau:'',tournee:''});
+  const [editId,setEditId] = useState(null);
+  const [flash,setFlash] = useState(null);
+  const [deleteConfirm,setDeleteConfirm] = useState(null);
+  const [saving,setSaving] = useState(false);
+  const [planifierModal,setPlanifierModal] = useState(null); // commande à planifier
+
+  const jours = getJoursOuvres();
+  const load = async () => { try{setDeliveries(await getLivraisons());}catch(e){console.error(e);}finally{setLoading(false);} };
+  useEffect(()=>{load();},[]);
+  const showFlash = (type,msg) => { setFlash({type,msg}); setTimeout(()=>setFlash(null),3000); };
+
+  const handleSave = async () => {
+    if(!form.commande.trim()||!form.jour||!form.creneau||!form.tournee){showFlash('error','Tous les champs sont requis.');return;}
+    const num=form.commande.trim().toUpperCase();
+    if(deliveries.find(d=>d.commande===num&&d.id!==editId)){showFlash('error',`La commande ${num} existe déjà.`);return;}
+    setSaving(true);
+    try {
+      if(editId){ const updated=await updateLivraison(editId,{commande:num,jour:form.jour,creneau:form.creneau}); setDeliveries(prev=>prev.map(d=>d.id===editId?updated:d)); showFlash('ok','Commande mise à jour ✓'); setEditId(null); }
+      else { const created=await addLivraison({commande:num,jour:form.jour,creneau:form.creneau,tournee:form.tournee}); setDeliveries(prev=>[created,...prev]); showFlash('ok','Commande ajoutée ✓'); }
+      setForm({commande:'',jour:'',creneau:'',tournee:''});
+    } catch(e){showFlash('error','Erreur lors de la sauvegarde.');}
+    finally{setSaving(false);}
+  };
+
+  const toggleConfirm = async (d) => {
+    if(d.statut==='livree') return;
+    if(d.statut==='aplanifier') { setPlanifierModal(d); return; }
+    let newStatut;
+    if(d.statut==='planifiee') newStatut='confirmee';
+    else if(d.statut==='confirmee') newStatut='planifiee';
+    try { const updated=await updateLivraison(d.id,{statut:newStatut}); setDeliveries(prev=>prev.map(x=>x.id===d.id?updated:x)); } catch(e){console.error(e);}
+  };
+
+  const handlePlanifier = async (creneau, tournee) => {
+    try {
+      const updated = await updateLivraison(planifierModal.id, {statut:'planifiee', creneau, tournee});
+      setDeliveries(prev => prev.map(x => x.id===planifierModal.id ? updated : x));
+      setPlanifierModal(null);
+    } catch(e) { console.error(e); }
+  };
+
+  const handleDelete = async (id) => {
+    try { await deleteLivraison(id); setDeliveries(prev=>prev.filter(d=>d.id!==id)); setDeleteConfirm(null); } catch(e){console.error(e);}
+  };
+
+  const grouped = {};
+  jours.forEach(j => { const k=dateKey(j); grouped[k]=deliveries.filter(d=>d.jour===k).sort((a,b)=>SLOTS.indexOf(a.creneau)-SLOTS.indexOf(b.creneau)); });
+
+  const counts = {aplanifier:0,planifiee:0,confirmee:0,livree:0};
+  deliveries.forEach(d=>{if(counts[d.statut]!==undefined)counts[d.statut]++;});
+
+  if(loading)return <div className="loading">Chargement…</div>;
+  return (
+    <div className="page">
+      <div className="page-hero">
+        <h2>Planification des tournées</h2><p>Gérez et confirmez le planning de livraison</p>
+        <div className="hero-stats">
+          <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
+        </div>
+      </div>
+      {flash&&<div className={`flash flash-${flash.type}`}>{flash.msg}</div>}
+
+      {/* Import AS400 */}
+      <ImportAS400 deliveries={deliveries} onImport={(nouvelles) => { setDeliveries(prev => [...nouvelles, ...prev]); showFlash('ok', nouvelles.length + ' commande' + (nouvelles.length>1?'s':'') + ' importée' + (nouvelles.length>1?'s':'') + ' ✓'); }} />
+
+      {/* Suppression en masse */}
+      <BulkDelete deliveries={deliveries} onDeleted={(statut) => { setDeliveries(prev => prev.filter(d => d.statut !== statut)); showFlash('ok', 'Commandes supprimées ✓'); }} />
+      <div className="card form-card">
+        <div className="card-title">{editId?'✏️ Modifier':'➕ Nouvelle livraison'}</div>
+        <div className="form-grid">
+          <div className="field"><label>N° de commande</label><input placeholder="ex. CMD-1042" value={form.commande} onChange={e=>setForm({...form,commande:e.target.value})} onKeyDown={e=>e.key==='Enter'&&handleSave()}/></div>
+          <div className="field">
+            <label>Jour de livraison</label>
+            <div className="toggle-group">
+              {jours.map(d => {
+                const k = dateKey(d);
+                const badge = dateBadge(d);
+                return (
+                  <button key={k} className={`toggle-btn ${form.jour===k?'active':''}`} onClick={()=>setForm({...form,jour:k})}>
+                    <span style={{fontSize:'0.78rem',fontWeight:700}}>{dateLabelCourt(d)}</span>
+                    {badge&&<span style={{fontSize:'0.6rem',background:form.jour===k?'rgba(255,255,255,0.3)':badge.color,color:'white',borderRadius:4,padding:'1px 5px',fontWeight:800}}>{badge.text}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="field">
+            <label>Créneau</label>
+            <div className="toggle-group">
+              {SLOTS.map(s=><button key={s} className={`toggle-btn ${form.creneau===s?'active':''}`} onClick={()=>setForm({...form,creneau:s})}>{s==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</button>)}
+            </div>
+          </div>
+          <div className="field" style={{gridColumn:'1 / -1'}}>
+            <label>Tournée (livreur)</label>
+            <div className="toggle-group">
+              {LIVREURS.map(l=><button key={l} className={`toggle-btn ${form.tournee===l?'active':''}`} onClick={()=>setForm({...form,tournee:l})}>{l}</button>)}
+            </div>
+          </div>
+        </div>
+        <div className="form-actions">
+          {editId&&<button className="btn-ghost" onClick={()=>{setForm({commande:'',jour:'',creneau:'',tournee:''});setEditId(null);}}>Annuler</button>}
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>{saving?'…':editId?'Mettre à jour':'Ajouter'}</button>
+        </div>
+      </div>
+      <div className="planning-wrap">
+        {jours.map(d => {
+          const k = dateKey(d);
+          const liste = grouped[k]||[];
+          if(liste.length===0) return null;
+          const badge = dateBadge(d);
+          return (
+            <div key={k} className="day-block">
+              <div className="day-label">
+                <span>{dateLabel(d)}</span>
+                {badge&&<span className={badge.color==='#e8a030'?'day-badge-today':'day-badge-tomorrow'}>{badge.text}</span>}
+                <span className="day-count">{liste.length}</span>
+              </div>
+              {liste.map(d2=>(
+                <div key={d2.id} className="row-delivery">
+                  <span className="cmd-mono">{d2.commande}</span>
+                  {d2.client&&<span style={{fontSize:'0.82rem',color:'var(--text)',fontWeight:600,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d2.client}</span>}
+                  {d2.tournee&&<span style={{fontSize:'0.78rem',fontWeight:700,color:'#6b7a9e',background:'#eaeef8',padding:'2px 8px',borderRadius:6}}>{d2.tournee}</span>}
+                  <span className={`pill ${d2.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{d2.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span>
+                  <StatusBadge s={d2.statut}/>
+                  <div className="row-actions">
+                    {d2.statut==='aplanifier'&&<button className="btn-status" style={{background:'#f5f3ff',color:'#7c3aed',border:'1px solid #c4b5fd'}} onClick={()=>toggleConfirm(d2)}>📋 Planifier</button>}
+                  {(d2.statut==='planifiee'||d2.statut==='confirmee')&&<button className={`btn-status ${d2.statut==='confirmee'?'btn-status-undo':'btn-status-confirm'}`} onClick={()=>toggleConfirm(d2)}>{d2.statut==='planifiee'?'✓ Confirmer':'↩ Planifiée'}</button>}
+                    {d2.statut!=='livree'&&<button className="icon-btn" onClick={()=>{setForm({commande:d2.commande,jour:d2.jour,creneau:d2.creneau,tournee:d2.tournee||''});setEditId(d2.id);}}>✏️</button>}
+                    <button className="icon-btn red" onClick={()=>setDeleteConfirm(d2.id)}><TrashIcon/></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+        {deliveries.length===0&&<div className="empty">Aucune livraison planifiée pour le moment.</div>}
+      </div>
+      {planifierModal && (
+        <PlanifierModal
+          commande={planifierModal.commande}
+          onConfirm={handlePlanifier}
+          onCancel={() => setPlanifierModal(null)}
+        />
+      )}
+
+      {deleteConfirm&&(
+        <div className="overlay" onClick={()=>setDeleteConfirm(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <p>Supprimer cette livraison ?</p>
+            <div className="modal-btns">
+              <button className="btn-ghost" onClick={()=>setDeleteConfirm(null)}>Annuler</button>
+              <button className="btn-danger" onClick={()=>handleDelete(deleteConfirm)}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Livreur ───────────────────────────────────────────────────────────────────
+function Livreur() {
+  const [livreurChoisi, setLivreurChoisi] = useState('');
+  const [deliveries, setDeliveries] = useState({duJour:[], autres:[]});
+  const [loading, setLoading] = useState(false);
+  const [showSig, setShowSig] = useState(null); // id de la commande à signer
+  const [, forceUpdate] = useState(0);
+
+  const today = dateKey(new Date());
+
+  const loadCommandes = async (nom) => {
+    setLoading(true);
+    try {
+      const all = await getLivraisons();
+      const mine = all.filter(d => d.tournee === nom);
+      const sortFn = (a,b) => {
+        const order = {planifiee:0, confirmee:1, livree:2};
+        if(order[a.statut] !== order[b.statut]) return order[a.statut]-order[b.statut];
+        return SLOTS.indexOf(a.creneau)-SLOTS.indexOf(b.creneau);
+      };
+      const duJour = mine.filter(d => d.jour === today).sort(sortFn);
+      const autres = mine.filter(d => d.jour !== today).sort((a,b) => a.jour.localeCompare(b.jour) || sortFn(a,b));
+      setDeliveries({duJour, autres});
+    } catch(e){console.error(e);}
+    finally{setLoading(false);}
+  };
+
+  const choisirLivreur = (nom) => {
+    setLivreurChoisi(nom);
+    loadCommandes(nom);
+  };
+
+  const handleConfirmLoad = async (d) => {
+    try {
+      const updated = await updateLivraison(d.id, {statut:'confirmee'});
+      setDeliveries(prev => ({
+        duJour: (prev.duJour||[]).map(x => x.id===d.id ? updated : x),
+        autres: (prev.autres||[]).map(x => x.id===d.id ? updated : x),
+      }));
+    } catch(e){console.error(e);}
+  };
+
+  const handleSignatureSave = async (sig) => {
+    try {
+      const updated = await updateLivraison(showSig, {statut:'livree', signature:sig, livre_le:new Date().toISOString()});
+      setDeliveries(prev => ({
+        duJour: (prev.duJour||[]).map(x => x.id===showSig ? updated : x),
+        autres: (prev.autres||[]).map(x => x.id===showSig ? updated : x),
+      }));
+      setShowSig(null);
+    } catch(e){console.error(e);}
+  };
+
+  const formatJour = (key) => { if(!key)return key; const d=new Date(key+'T00:00:00'); return dateLabel(d); };
+
+  const allDeliveries = Array.isArray(deliveries) ? deliveries : [...(deliveries.duJour||[]), ...(deliveries.autres||[])];
+  const counts = {aplanifier:0, planifiee:0, confirmee:0, livree:0};
+  allDeliveries.forEach(d => { if(counts[d.statut]!==undefined) counts[d.statut]++; });
+
+  // Étape 1 : choix du livreur
+  if(!livreurChoisi) return (
+    <div className="page page-adv">
+      <div className="page-hero" style={{background:'linear-gradient(135deg,#1a2d6b 70%,#213580)'}}>
+        <h2>🚚 Espace livreur</h2>
+        <p>Choisissez votre tournée pour voir vos commandes du jour</p>
+      </div>
+      <div className="card">
+        <div className="card-title">Qui êtes-vous ?</div>
+        <div className="toggle-group" style={{flexWrap:'wrap'}}>
+          {LIVREURS.map(l => (
+            <button key={l} className="toggle-btn" style={{flex:'1 0 140px',padding:'14px',fontSize:'1rem'}} onClick={()=>choisirLivreur(l)}>
+              🚚 {l}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Étape 2 : liste des commandes
+  return (
+    <div className="page">
+      <div className="page-hero" style={{background:'linear-gradient(135deg,#1a2d6b 70%,#213580)'}}>
+        <h2>🚚 {livreurChoisi}</h2>
+        <p>Tournée du {formatJour(today)}</p>
+        <div className="hero-stats">
+          <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} à charger</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
+        </div>
+      </div>
+
+      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16}}>
+        <button className="btn-ghost" onClick={()=>{setLivreurChoisi('');setDeliveries([]);}}>← Changer de tournée</button>
+      </div>
+
+      {loading && <div className="loading">Chargement…</div>}
+
+      {!loading && allDeliveries.length===0 && (
+        <div className="empty">Aucune commande pour votre tournée aujourd'hui.</div>
+      )}
+
+      {!loading && allDeliveries.length>0 && (
+        <div className="planning-wrap">
+          {/* Commandes du jour */}
+          {(deliveries.duJour||[]).length>0 && <div className="day-label" style={{borderRadius:'var(--radius)',marginBottom:8}}>Aujourd'hui — {formatJour(today)} <span className="day-count">{(deliveries.duJour||[]).length}</span></div>}
+          {(deliveries.duJour||[]).map(d => (
+            <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${STATUS[d.statut]?.dot||'#2563eb'}`}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                <div>
+                  <div className="result-cmd" style={{marginBottom:6}}>{d.commande}</div>
+                  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                    <span className={`pill ${d.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{d.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span>
+                    <StatusBadge s={d.statut}/>
+                  </div>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:200}}>
+                  {d.statut==='planifiee' && (
+                    <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>
+                      📦 Confirmer le chargement
+                    </button>
+                  )}
+                  {(d.statut==='planifiee'||d.statut==='confirmee') && (
+                    <button className="btn-deliver" style={{padding:'10px 16px',fontSize:'0.9rem',marginBottom:0}} onClick={()=>setShowSig(d.id)}>
+                      ✍️ Faire signer
+                    </button>
+                  )}
+                  {d.statut==='livree' && (
+                    <div className="delivered-msg">✅ Livrée</div>
+                  )}
+                </div>
+              </div>
+              {d.statut==='livree' && d.signature && (
+                <div className="sig-preview" style={{marginTop:12}}>
+                  <div className="rlabel" style={{marginBottom:6}}>Signature</div>
+                  <img src={d.signature} alt="Signature" style={{maxWidth:200,maxHeight:80,border:'1px solid #d0d8ef',borderRadius:6}}/>
+                </div>
+              )}
+            </div>
+          ))}
+          {/* Autres commandes (hors aujourd'hui) */}
+          {(deliveries.autres||[]).length>0 && (
+            <>
+              <div style={{margin:'16px 0 8px',padding:'9px 16px',background:'#eaeef8',borderRadius:'var(--radius)',fontSize:'0.78rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.07em'}}>
+                Autres jours — {(deliveries.autres||[]).length} commande{(deliveries.autres||[]).length>1?'s':''}
+              </div>
+              {(deliveries.autres||[]).map(d => (
+                <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${STATUS[d.statut]?.dot||'#2563eb'}`,opacity:0.85}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+                    <div>
+                      <div style={{fontSize:'0.72rem',color:'var(--muted)',fontWeight:600,marginBottom:4}}>{formatJour(d.jour)}</div>
+                      <div className="result-cmd" style={{marginBottom:6}}>{d.commande}</div>
+                      <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                        <span className={`pill ${d.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{d.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span>
+                        <StatusBadge s={d.statut}/>
+                      </div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:200}}>
+                      {d.statut==='planifiee' && <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>📦 Confirmer le chargement</button>}
+                      {(d.statut==='planifiee'||d.statut==='confirmee') && <button className="btn-deliver" style={{padding:'10px 16px',fontSize:'0.9rem',marginBottom:0}} onClick={()=>setShowSig(d.id)}>✍️ Faire signer</button>}
+                      {d.statut==='livree' && <div className="delivered-msg">✅ Livrée</div>}
+                    </div>
+                  </div>
+                  {d.statut==='livree'&&d.signature&&<div className="sig-preview" style={{marginTop:12}}><div className="rlabel" style={{marginBottom:6}}>Signature</div><img src={d.signature} alt="Signature" style={{maxWidth:200,maxHeight:80,border:'1px solid #d0d8ef',borderRadius:6}}/></div>}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {showSig && (
+        <SignaturePad
+          commande={allDeliveries.find(d=>d.id===showSig)?.commande}
+          onSave={handleSignatureSave}
+          onCancel={()=>setShowSig(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Historique ───────────────────────────────────────────────────────────────
+function Historique() {
+  const [deliveries, setDeliveries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtreStatut, setFiltreStatut] = useState('');
+
+  const today = dateKey(new Date());
+
+  useEffect(() => {
+    getLivraisons()
+      .then(data => {
+        // Uniquement les commandes dont la date est passée (avant aujourd'hui)
+        const passees = data.filter(d => d.jour < today);
+        // Trier par date décroissante
+        passees.sort((a,b) => b.jour.localeCompare(a.jour));
+        setDeliveries(passees);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = deliveries.filter(d => {
+    if(filtreStatut && d.statut !== filtreStatut) return false;
+    return true;
+  });
+
+  // Grouper par date
+  const grouped = {};
+  filtered.forEach(d => {
+    if(!grouped[d.jour]) grouped[d.jour] = [];
+    grouped[d.jour].push(d);
+  });
+  const dates = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+
+  const formatJour = (key) => { const d=new Date(key+'T00:00:00'); return dateLabel(d); };
+
+  const counts = {aplanifier:0, planifiee:0, confirmee:0, livree:0};
+  filtered.forEach(d => { if(counts[d.statut]!==undefined) counts[d.statut]++; });
+
+  if(loading) return <div className="loading">Chargement…</div>;
+
+  return (
+    <div className="page" style={{maxWidth:920}}>
+      <div className="page-hero">
+        <h2>📂 Historique des livraisons</h2>
+        <p>Toutes les commandes des jours passés</p>
+        <div className="hero-stats">
+          <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
+          <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {filtered.length}</span>
+        </div>
+      </div>
+
+      {/* Filtres */}
+      <div className="card form-card">
+        <div className="card-title">🔎 Filtrer par statut</div>
+        <div style={{display:'flex',gap:12,flexWrap:'wrap',alignItems:'flex-end'}}>
+          <div className="field" style={{flex:1,minWidth:160}}>
+            <label>Statut</label>
+            <select value={filtreStatut} onChange={e=>setFiltreStatut(e.target.value)}>
+              <option value="">Tous</option>
+              <option value="aplanifier">À planifier</option>
+              <option value="planifiee">Planifiée</option>
+              <option value="confirmee">Confirmée</option>
+              <option value="livree">Livrée</option>
+            </select>
+          </div>
+          {filtreStatut && (
+            <button className="btn-ghost" onClick={()=>setFiltreStatut('')}>Effacer</button>
+          )}
+        </div>
+      </div>
+
+      {dates.length === 0 && <div className="empty">Aucune commande dans l'historique.</div>}
+
+      <div className="planning-wrap">
+        {dates.map(date => (
+          <div key={date} className="day-block">
+            <div className="day-label">
+              <span>{formatJour(date)}</span>
+              <span className="day-count">{grouped[date].length}</span>
+            </div>
+            {grouped[date].map(d => (
+              <div key={d.id} className="row-delivery">
+                <span className="cmd-mono">{d.commande}</span>
+                {d.tournee && <span style={{fontSize:'0.78rem',fontWeight:700,color:'#6b7a9e',background:'#eaeef8',padding:'2px 8px',borderRadius:6}}>{d.tournee}</span>}
+                <span className={`pill ${d.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{d.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span>
+                <StatusBadge s={d.statut}/>
+                {d.statut==='livree' && d.livre_le && (
+                  <span style={{fontSize:'0.75rem',color:'var(--muted)',marginLeft:'auto'}}>
+                    {new Date(d.livre_le).toLocaleString('fr-FR')}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+const TABS = [
+  {id:'suivi',      label:'🔍 Suivi',      roles:['adv','responsable']},
+  {id:'agenda',     label:'📅 Agenda',     roles:['adv','responsable']},
+  {id:'tournees',   label:'📋 Tournées',   roles:['responsable']},
+  {id:'livreur',    label:'🚚 Livreur',    roles:['responsable','livreur']},
+  {id:'historique', label:'📂 Historique', roles:['adv','responsable','livreur']},
+];
+const DEFAULT_TAB = {adv:'suivi',responsable:'tournees',livreur:'livreur'};
+
+function AppInner() {
+  const {session,logout} = useAuth();
+  const [page,setPage] = useState(null);
+  useEffect(()=>{ if(session&&!page)setPage(DEFAULT_TAB[session.role]); if(!session)setPage(null); },[session]);
+  if(!session)return <Login/>;
+  const tabs = TABS.filter(t=>t.roles.includes(session.role));
+  return (
+    <>
+      <nav className="nav">
+        <div style={{display:'flex',alignItems:'center'}}>
+          <div className="nav-logo-box"><AttisLogo size={0.82}/></div>
+          <span className="nav-tagline">Suivi des livraisons</span>
+        </div>
+        <div className="nav-tabs">{tabs.map(t=><button key={t.id} className={`nav-tab ${page===t.id?'active':''}`} onClick={()=>setPage(t.id)}>{t.label}</button>)}</div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span className="nav-role-badge">{session.label}</span>
+          <button className="btn-logout" onClick={logout}>⬆ Déconnexion</button>
+        </div>
+      </nav>
+      {page==='suivi'    && <Suivi/>}
+      {page==='agenda'   && <Agenda/>}
+      {page==='tournees' && <Tournees/>}
+      {page==='livreur'    && <Livreur/>}
+      {page==='historique' && <Historique/>}
+    </>
+  );
+}
+
+function App() {
+  return <AuthProvider><AppInner/></AuthProvider>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
