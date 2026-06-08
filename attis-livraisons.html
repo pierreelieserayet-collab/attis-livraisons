@@ -484,6 +484,7 @@ function Agenda() {
           );
         })}
       </div>
+      {editModal && <DecalerModal commande={editModal} onConfirm={handleDecaler} onCancel={()=>setEditModal(null)}/>}
     </div>
   );
 }
