@@ -1346,12 +1346,166 @@ function Historique() {
   );
 }
 
+// ── Statistiques ────────────────────────────────────────────────────────────
+function Statistiques() {
+  const [all, setAll] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getLivraisons().then(setAll).catch(console.error).finally(() => setLoading(false));
+  }, []);
+
+  if(loading) return <div className="loading">Chargement...</div>;
+
+  const livrees = all.filter(d => d.statut === 'livree');
+  const total = all.length;
+  const totalLivrees = livrees.length;
+
+  // Par livreur
+  const parLivreur = {};
+  LIVREURS.forEach(l => { parLivreur[l] = {total:0, livrees:0}; });
+  all.forEach(d => {
+    if(d.tournee && parLivreur[d.tournee]) {
+      parLivreur[d.tournee].total++;
+      if(d.statut==='livree') parLivreur[d.tournee].livrees++;
+    }
+  });
+
+  // Par creneau
+  const matin = all.filter(d => d.creneau==='Matin');
+  const apm = all.filter(d => d.creneau==='Après-midi');
+  const matinLivrees = matin.filter(d => d.statut==='livree').length;
+  const apmLivrees = apm.filter(d => d.statut==='livree').length;
+
+  // Par jour (jours uniques)
+  const parJour = {};
+  all.forEach(d => {
+    if(!d.jour) return;
+    if(!parJour[d.jour]) parJour[d.jour] = {total:0, livrees:0};
+    parJour[d.jour].total++;
+    if(d.statut==='livree') parJour[d.jour].livrees++;
+  });
+  const jours = Object.keys(parJour).sort();
+  const moyParJour = jours.length > 0 ? Math.round(jours.reduce((s,j) => s+parJour[j].total, 0) / jours.length) : 0;
+  const moyLivreesParJour = jours.length > 0 ? Math.round(jours.reduce((s,j) => s+parJour[j].livrees, 0) / jours.length) : 0;
+
+  // Par statut
+  const parStatut = {aplanifier:0, planifiee:0, confirmee:0, livree:0};
+  all.forEach(d => { if(parStatut[d.statut]!==undefined) parStatut[d.statut]++; });
+
+  const pct = (n, t) => t > 0 ? Math.round(n/t*100) : 0;
+
+  const StatCard = ({title, value, sub, color}) => (
+    <div className="card" style={{textAlign:'center',padding:'20px 16px'}}>
+      <div style={{fontSize:'2rem',fontWeight:800,color:color||'var(--navy)',marginBottom:4}}>{value}</div>
+      <div style={{fontSize:'0.85rem',fontWeight:700,color:'var(--text)',marginBottom:2}}>{title}</div>
+      {sub && <div style={{fontSize:'0.75rem',color:'var(--muted)'}}>{sub}</div>}
+    </div>
+  );
+
+  const Bar = ({label, total, livrees, color}) => (
+    <div style={{marginBottom:12}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+        <span style={{fontSize:'0.82rem',fontWeight:700}}>{label}</span>
+        <span style={{fontSize:'0.82rem',color:'var(--muted)'}}>{livrees}/{total} livrees ({pct(livrees,total)}%)</span>
+      </div>
+      <div style={{height:8,background:'var(--bg2)',borderRadius:4,overflow:'hidden'}}>
+        <div style={{height:'100%',background:color||'var(--navy)',borderRadius:4,width:pct(total, all.length)+'%'}}></div>
+      </div>
+      <div style={{height:4,background:'var(--bg2)',borderRadius:4,overflow:'hidden',marginTop:2}}>
+        <div style={{height:'100%',background:'#16a34a',borderRadius:4,width:pct(livrees,total)+'%'}}></div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="page" style={{maxWidth:900}}>
+      <div style={{background:'linear-gradient(135deg,var(--navy) 70%,var(--navy-mid))',borderRadius:'var(--radius)',padding:'14px 20px',marginBottom:20}}>
+        <h2 style={{fontSize:'1.1rem',fontWeight:700,color:'white'}}>📊 Statistiques</h2>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
+        <StatCard title="Commandes total" value={total} color="var(--navy)"/>
+        <StatCard title="Livrees" value={totalLivrees} sub={pct(totalLivrees,total)+'% du total'} color="#16a34a"/>
+        <StatCard title="Moy. par jour" value={moyParJour} sub="commandes planifiees"/>
+        <StatCard title="Jours actifs" value={jours.length} sub="jours avec livraisons"/>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+        <div className="card">
+          <div className="card-title">Par statut</div>
+          {Object.entries(parStatut).map(([k,v]) => (
+            <div key={k} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--bg2)'}}>
+              <span style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{width:10,height:10,borderRadius:2,background:STATUS[k]?STATUS[k].dot:'#ccc',display:'inline-block'}}></span>
+                <span style={{fontSize:'0.85rem',fontWeight:600}}>{STATUS[k]?STATUS[k].label:k}</span>
+              </span>
+              <span style={{fontSize:'0.85rem',fontWeight:700,color:'var(--navy)'}}>{v} <span style={{color:'var(--muted)',fontWeight:400}}>({pct(v,total)}%)</span></span>
+            </div>
+          ))}
+        </div>
+
+        <div className="card">
+          <div className="card-title">Par creneau</div>
+          <div style={{marginBottom:16}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+              <span style={{fontSize:'0.85rem',fontWeight:700}}>☀️ Matin</span>
+              <span style={{fontSize:'0.85rem',color:'var(--muted)'}}>{matin.length} commandes</span>
+            </div>
+            <div style={{height:10,background:'var(--bg2)',borderRadius:5,overflow:'hidden'}}>
+              <div style={{height:'100%',background:'#d97706',borderRadius:5,width:pct(matin.length,total)+'%'}}></div>
+            </div>
+            <div style={{fontSize:'0.75rem',color:'var(--muted)',marginTop:2}}>{matinLivrees} livrees ({pct(matinLivrees,matin.length)}%)</div>
+          </div>
+          <div>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+              <span style={{fontSize:'0.85rem',fontWeight:700}}>🌙 Apres-midi</span>
+              <span style={{fontSize:'0.85rem',color:'var(--muted)'}}>{apm.length} commandes</span>
+            </div>
+            <div style={{height:10,background:'var(--bg2)',borderRadius:5,overflow:'hidden'}}>
+              <div style={{height:'100%',background:'#2563eb',borderRadius:5,width:pct(apm.length,total)+'%'}}></div>
+            </div>
+            <div style={{fontSize:'0.75rem',color:'var(--muted)',marginTop:2}}>{apmLivrees} livrees ({pct(apmLivrees,apm.length)}%)</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card-title">Par livreur</div>
+        {LIVREURS.map(l => parLivreur[l] && parLivreur[l].total > 0 && (
+          <Bar key={l} label={l} total={parLivreur[l].total} livrees={parLivreur[l].livrees} color="var(--navy)"/>
+        ))}
+        {LIVREURS.every(l => !parLivreur[l] || parLivreur[l].total === 0) && <div style={{color:'var(--muted)',fontSize:'0.85rem'}}>Aucune donnee</div>}
+      </div>
+
+      <div className="card">
+        <div className="card-title">Par jour (les 10 derniers)</div>
+        {jours.slice(-10).reverse().map(j => {
+          const d = new Date(j+'T00:00:00');
+          return (
+            <div key={j} style={{display:'flex',alignItems:'center',gap:12,padding:'6px 0',borderBottom:'1px solid var(--bg2)'}}>
+              <span style={{fontSize:'0.8rem',fontWeight:700,minWidth:130,color:'var(--navy)'}}>{dateLabel(d)}</span>
+              <div style={{flex:1,height:8,background:'var(--bg2)',borderRadius:4,overflow:'hidden'}}>
+                <div style={{height:'100%',background:'var(--navy)',borderRadius:4,width:pct(parJour[j].total, Math.max(...jours.map(jj=>parJour[jj].total)))+'%'}}></div>
+              </div>
+              <span style={{fontSize:'0.8rem',color:'var(--muted)',minWidth:60,textAlign:'right'}}>{parJour[j].total} cmd</span>
+              <span style={{fontSize:'0.8rem',color:'#16a34a',minWidth:60,textAlign:'right'}}>{parJour[j].livrees} livr.</span>
+            </div>
+          );
+        })}
+        {jours.length === 0 && <div style={{color:'var(--muted)',fontSize:'0.85rem'}}>Aucune donnee</div>}
+      </div>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 const TABS = [
   {id:'agenda',     label:'📅 Agenda',     roles:['adv','responsable']},
   {id:'tournees',   label:'📋 Tournées',   roles:['responsable']},
   {id:'livreur',    label:'🚚 Livreur',    roles:['responsable','livreur']},
   {id:'historique', label:'📂 Historique', roles:['adv','responsable','livreur']},
+  {id:'stats',      label:'📊 Stats',      roles:['adv','responsable']},
 ];
 const DEFAULT_TAB = {adv:'agenda',responsable:'tournees',livreur:'livreur'};
 
@@ -1379,6 +1533,7 @@ function AppInner() {
       {page==='tournees' && <Tournees/>}
       {page==='livreur'    && <Livreur/>}
       {page==='historique' && <Historique/>}
+      {page==='stats'      && <Statistiques/>}
     </>
   );
 }
