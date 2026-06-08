@@ -1184,7 +1184,8 @@ function Livreur() {
             <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${(STATUS[d.statut] ? STATUS[d.statut].dot : '#2563eb')}`}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
                 <div>
-                  <div className="result-cmd" style={{marginBottom:6}}>{d.commande}</div>
+                  <div className="result-cmd" style={{marginBottom:4}}>{d.commande}</div>
+                  {d.client&&<div style={{fontSize:'0.82rem',fontWeight:600,color:'var(--text)',marginBottom:6}}>{d.client}</div>}
                   <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
                     <span className={`pill ${d.creneau==='Matin'?'pill-sun':'pill-moon'}`}>{d.creneau==='Matin'?<><SunIcon/> Matin</>:<><MoonIcon/> Après-midi</>}</span>
                     <StatusBadge s={d.statut}/>
