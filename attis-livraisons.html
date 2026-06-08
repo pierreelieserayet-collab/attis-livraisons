@@ -608,6 +608,130 @@ function BulkDelete({ deliveries, onDeleted }) {
   );
 }
 
+// ── Planifier en masse ───────────────────────────────────────────────────────
+function PlanifierEnMasse({ deliveries, onPlanifie }) {
+  const [open, setOpen] = useState(false);
+  const [jour, setJour] = useState('');
+  const [creneau, setCreneau] = useState('');
+  const [tournee, setTournee] = useState('');
+  const [numeros, setNumeros] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const jours = getJoursOuvres();
+
+  const handleSave = async () => {
+    if(!jour || !creneau || !tournee) { alert('Veuillez choisir un jour, un créneau et une tournée.'); return; }
+    const lines = numeros.split(/[
+,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    if(lines.length === 0) { alert('Veuillez saisir au moins un numéro de commande.'); return; }
+    setSaving(true);
+    let ok = 0, notFound = [], alreadyDone = [];
+    try {
+      for(const num of lines) {
+        const existing = deliveries.find(d => d.commande === num);
+        if(!existing) { notFound.push(num); continue; }
+        if(existing.statut !== 'aplanifier') { alreadyDone.push(num); continue; }
+        const updated = await updateLivraison(existing.id, {statut:'planifiee', jour, creneau, tournee});
+        onPlanifie(updated);
+        ok++;
+      }
+      setResult({ok, notFound, alreadyDone});
+      setNumeros('');
+    } catch(e) { alert('Erreur : ' + e.message); }
+    finally { setSaving(false); }
+  };
+
+  const reset = () => { setOpen(false); setJour(''); setCreneau(''); setTournee(''); setNumeros(''); setResult(null); };
+
+  if(!open) return (
+    <div style={{marginBottom:24}}>
+      <button className="btn-primary" style={{background:'#7c3aed',width:'100%',padding:14,fontSize:'0.95rem'}} onClick={()=>setOpen(true)}>
+        📋 Planifier une tournée complète
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="card form-card" style={{borderLeft:'4px solid #7c3aed',marginBottom:24}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <div className="card-title" style={{marginBottom:0}}>📋 Planifier une tournée complète</div>
+        <button className="btn-ghost" style={{padding:'4px 10px',fontSize:'0.8rem'}} onClick={reset}>✕ Fermer</button>
+      </div>
+
+      {result ? (
+        <div>
+          <div className="flash flash-ok" style={{marginBottom:12}}>✓ {result.ok} commande{result.ok>1?'s':''} planifiée{result.ok>1?'s':''}</div>
+          {result.notFound.length>0 && <div className="flash flash-error" style={{marginBottom:8}}>Introuvables : {result.notFound.join(', ')}</div>}
+          {result.alreadyDone.length>0 && <div style={{padding:'8px 12px',background:'#fef3c7',borderRadius:8,fontSize:'0.82rem',color:'#92400e',marginBottom:8}}>Déjà planifiées : {result.alreadyDone.join(', ')}</div>}
+          <button className="btn-primary" style={{marginTop:8}} onClick={()=>setResult(null)}>Planifier d'autres commandes</button>
+        </div>
+      ) : (
+        <>
+          <div className="form-grid" style={{marginBottom:16}}>
+            <div className="field">
+              <label>Jour de livraison</label>
+              <div className="toggle-group">
+                {jours.map(d => {
+                  const k = dateKey(d);
+                  const badge = dateBadge(d);
+                  return (
+                    <button key={k} className={'toggle-btn ' + (jour===k?'active':'')} onClick={()=>setJour(k)} style={{flexDirection:'column',gap:2,padding:'7px 10px',minWidth:72}}>
+                      <span style={{fontSize:'0.78rem',fontWeight:700}}>{dateLabelCourt(d)}</span>
+                      {badge&&<span style={{fontSize:'0.6rem',background:jour===k?'rgba(255,255,255,0.3)':badge.color,color:'white',borderRadius:4,padding:'1px 5px',fontWeight:800}}>{badge.text}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="field">
+              <label>Créneau</label>
+              <div className="toggle-group">
+                <button className={'toggle-btn ' + (creneau==='Matin'?'active':'')} onClick={()=>setCreneau('Matin')}>☀️ Matin</button>
+                <button className={'toggle-btn ' + (creneau==='Après-midi'?'active':'')} onClick={()=>setCreneau('Après-midi')}>🌙 Après-midi</button>
+              </div>
+            </div>
+            <div className="field">
+              <label>Tournée (livreur)</label>
+              <div className="toggle-group" style={{flexWrap:'wrap'}}>
+                {LIVREURS.map(l => (
+                  <button key={l} className={'toggle-btn ' + (tournee===l?'active':'')} onClick={()=>setTournee(l)}>{l}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="field" style={{marginBottom:16}}>
+            <label>Numéros de commande</label>
+            <textarea
+              value={numeros}
+              onChange={e=>setNumeros(e.target.value)}
+              placeholder={'Collez ou saisissez les numéros, un par ligne ou séparés par des virgules :
+194405
+194781
+198858'}
+              style={{width:'100%',minHeight:140,padding:'10px 12px',borderRadius:8,border:'1.5px solid var(--border)',background:'var(--bg)',fontFamily:'Courier New',fontSize:'0.9rem',resize:'vertical',outline:'none',color:'var(--navy)'}}
+            />
+            <div style={{fontSize:'0.75rem',color:'var(--muted)',marginTop:4}}>
+              {numeros.split(/[
+,;]+/).filter(s=>s.trim()).length} numéro{numeros.split(/[
+,;]+/).filter(s=>s.trim()).length>1?'s':''} saisi{numeros.split(/[
+,;]+/).filter(s=>s.trim()).length>1?'s':''}
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button className="btn-ghost" onClick={reset}>Annuler</button>
+            <button className="btn-primary" style={{background:'#7c3aed'}} onClick={handleSave} disabled={saving}>
+              {saving ? 'Planification...' : 'Planifier toutes ces commandes'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Modal Planifier ──────────────────────────────────────────────────────────
 function PlanifierModal({ commande, onConfirm, onCancel }) {
   const [creneau, setCreneau] = useState('');
@@ -725,6 +849,12 @@ function Tournees() {
         </div>
       </div>
       {flash&&<div className={`flash flash-${flash.type}`}>{flash.msg}</div>}
+
+      {/* Planifier en masse */}
+      <PlanifierEnMasse
+        deliveries={deliveries}
+        onPlanifie={(updated) => setDeliveries(prev => prev.map(x => x.id===updated.id ? updated : x))}
+      />
 
       {/* Import AS400 */}
       <ImportAS400 deliveries={deliveries} onImport={(nouvelles) => { setDeliveries(prev => [...nouvelles, ...prev]); showFlash('ok', nouvelles.length + ' commande' + (nouvelles.length>1?'s':'') + ' importée' + (nouvelles.length>1?'s':'') + ' ✓'); }} />
