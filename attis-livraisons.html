@@ -234,7 +234,7 @@ const LIVREURS = ['Manjula','George','Vladimir','Said','Houssem','Extérieur','A
 const STATUS = {
   aplanifier:{label:'À planifier', color:'#7c3aed',bg:'#f5f3ff',border:'#c4b5fd',dot:'#7c3aed'},
   planifiee: {label:'Planifiée',   color:'#2563eb',bg:'#eff6ff',border:'#bfdbfe',dot:'#2563eb'},
-  confirmee: {label:'Confirmée',   color:'#d97706',bg:'#fffbeb',border:'#fcd34d',dot:'#d97706'},
+  confirmee: {label:'Chargee',   color:'#d97706',bg:'#fffbeb',border:'#fcd34d',dot:'#d97706'},
   livree:    {label:'Livrée',      color:'#16a34a',bg:'#f0fdf4',border:'#86efac',dot:'#16a34a'},
 };
 
@@ -365,9 +365,9 @@ function Suivi() {
 
 // ── Modal Decaler ────────────────────────────────────────────────────────────
 function DecalerModal({ commande, onConfirm, onCancel }) {
-  const [jour, setJour] = useState(commande.jour);
-  const [creneau, setCreneau] = useState(commande.creneau);
-  const [tournee, setTournee] = useState(commande.tournee||'');
+  const [jour, setJour] = useState(commande ? commande.jour : '');
+  const [creneau, setCreneau] = useState(commande ? commande.creneau : '');
+  const [tournee, setTournee] = useState(commande ? (commande.tournee || '') : '');
   const jours = getJoursOuvres();
 
   const handleConfirm = () => {
@@ -451,7 +451,7 @@ function Agenda() {
         <h2>📅 Agenda de la semaine</h2><p>Vue d ensemble du planning de livraison</p>
         <div className="hero-stats">
           <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
-          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
           <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
           <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {deliveries.length}</span>
         </div>
@@ -626,7 +626,7 @@ function BulkDelete({ deliveries, onDeleted }) {
   const STATUTS = [
     {key:'aplanifier', label:'À planifier',  color:'#7c3aed'},
     {key:'planifiee',  label:'Planifiées',    color:'#2563eb'},
-    {key:'confirmee',  label:'Confirmées',    color:'#d97706'},
+    {key:'confirmee',  label:'Chargees',    color:'#d97706'},
     {key:'livree',     label:'Livrées',       color:'#16a34a'},
   ];
 
@@ -894,10 +894,10 @@ function Tournees() {
   return (
     <div className="page">
       <div className="page-hero">
-        <h2>Planification des tournées</h2><p>Gérez et confirmez le planning de livraison</p>
+        <h2>Planification des tournées</h2><p>Gérez et planifiez les tournees de livraison</p>
         <div className="hero-stats">
           <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
-          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
           <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
         </div>
       </div>
@@ -968,7 +968,7 @@ function Tournees() {
                   <StatusBadge s={d2.statut}/>
                   <div className="row-actions">
                     {d2.statut==='aplanifier'&&<button className="btn-status" style={{background:'#f5f3ff',color:'#7c3aed',border:'1px solid #c4b5fd'}} onClick={()=>toggleConfirm(d2)}>📋 Planifier</button>}
-                  {(d2.statut==='planifiee'||d2.statut==='confirmee')&&<button className={`btn-status ${d2.statut==='confirmee'?'btn-status-undo':'btn-status-confirm'}`} onClick={()=>toggleConfirm(d2)}>{d2.statut==='planifiee'?'✓ Confirmer':'↩ Planifiée'}</button>}
+                  {(d2.statut==='planifiee'||d2.statut==='confirmee')&&<button className={`btn-status ${d2.statut==='confirmee'?'btn-status-undo':'btn-status-confirm'}`} onClick={()=>toggleConfirm(d2)}>{d2.statut==='planifiee'?'✓ Charger':'↩ Planifiee'}</button>}
                     {d2.statut!=='livree'&&<button className="icon-btn" onClick={()=>{setForm({commande:d2.commande,jour:d2.jour,creneau:d2.creneau,tournee:d2.tournee||''});setEditId(d2.id);}}>✏️</button>}
                     <button className="icon-btn red" onClick={()=>setDeleteConfirm(d2.id)}><TrashIcon/></button>
                   </div>
@@ -1089,7 +1089,7 @@ function Livreur() {
         <p>Tournée du {formatJour(today)}</p>
         <div className="hero-stats">
           <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} à charger</span>
-          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
           <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
         </div>
       </div>
@@ -1121,7 +1121,7 @@ function Livreur() {
                 <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:200}}>
                   {d.statut==='planifiee' && (
                     <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>
-                      📦 Confirmer le chargement
+                      📦 Charger
                     </button>
                   )}
                   {(d.statut==='planifiee'||d.statut==='confirmee') && (
@@ -1160,7 +1160,7 @@ function Livreur() {
                       </div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:200}}>
-                      {d.statut==='planifiee' && <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>📦 Confirmer le chargement</button>}
+                      {d.statut==='planifiee' && <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>📦 Charger</button>}
                       {(d.statut==='planifiee'||d.statut==='confirmee') && <button className="btn-deliver" style={{padding:'10px 16px',fontSize:'0.9rem',marginBottom:0}} onClick={()=>setShowSig(d.id)}>✍️ Faire signer</button>}
                       {d.statut==='livree' && <div className="delivered-msg">✅ Livrée</div>}
                     </div>
@@ -1232,7 +1232,7 @@ function Historique() {
         <p>Toutes les commandes des jours passés</p>
         <div className="hero-stats">
           <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
-          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
+          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
           <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
           <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {filtered.length}</span>
         </div>
@@ -1248,7 +1248,7 @@ function Historique() {
               <option value="">Tous</option>
               <option value="aplanifier">À planifier</option>
               <option value="planifiee">Planifiée</option>
-              <option value="confirmee">Confirmée</option>
+              <option value="confirmee">Chargee</option>
               <option value="livree">Livrée</option>
             </select>
           </div>
