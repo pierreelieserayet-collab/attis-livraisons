@@ -1346,6 +1346,128 @@ function Historique() {
   );
 }
 
+// ── Extract AS400 ────────────────────────────────────────────────────────────
+function ExtractAS400() {
+  const fileRef = useRef(null);
+  const [preview, setPreview] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        const parsed = [];
+        for(const row of rows) {
+          if(String(row[0]) !== '1') continue;
+          const num = String(row[4]);
+          const client = String(row[7]||'').trim();
+          const dateRaw = String(row[14]||'');
+          if(!num || num==='undefined' || num==='0') continue;
+          let jour = null;
+          if(dateRaw.length===8) jour = dateRaw.slice(0,4)+'-'+dateRaw.slice(4,6)+'-'+dateRaw.slice(6,8);
+          parsed.push({commande:num, client, jour});
+        }
+        // Deduplicate by commande number
+        const seen = new Set();
+        const unique = parsed.filter(p => { if(seen.has(p.commande)) return false; seen.add(p.commande); return true; });
+        setPreview(unique);
+        setResult(null);
+      } catch(err) {
+        alert('Erreur lecture fichier : ' + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleSync = async () => {
+    if(!preview || preview.length===0) return;
+    setSaving(true);
+    let updated = 0;
+    let notFound = 0;
+    try {
+      const all = await getLivraisons();
+      for(const p of preview) {
+        const ex = all.find(d => d.commande === p.commande);
+        if(!ex) { notFound++; continue; }
+        if(ex.client !== p.client) {
+          await updateLivraison(ex.id, {client: p.client});
+          updated++;
+        }
+      }
+      setResult({updated, notFound, total: preview.length});
+      setPreview(null);
+    } catch(err) {
+      alert('Erreur : ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="page" style={{maxWidth:800}}>
+      <div style={{background:'linear-gradient(135deg,var(--navy) 70%,var(--navy-mid))',borderRadius:'var(--radius)',padding:'14px 20px',marginBottom:20}}>
+        <h2 style={{fontSize:'1.1rem',fontWeight:700,color:'white'}}>📥 Extract AS400</h2>
+        <p style={{color:'rgba(255,255,255,0.6)',fontSize:'0.82rem',marginTop:4}}>Importez votre extraction AS400 pour mettre a jour la raison sociale des clients</p>
+      </div>
+
+      {result && (
+        <div className="flash flash-ok" style={{marginBottom:16}}>
+          ✓ {result.updated} commande{result.updated>1?'s':''} mise{result.updated>1?'s':''} a jour — {result.notFound} introuvable{result.notFound>1?'s':''} dans l app
+        </div>
+      )}
+
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card-title">1. Choisir le fichier Excel</div>
+        <p style={{fontSize:'0.85rem',color:'var(--muted)',marginBottom:14}}>
+          Exportez vos commandes depuis AS400 et uploadez le fichier ici. Le programme lira les lignes de type 1 (entetes commandes) et mettra a jour la raison sociale dans l app.
+        </p>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleFile}/>
+        <button className="btn-primary" onClick={()=>fileRef.current.click()}>
+          📂 Choisir le fichier AS400
+        </button>
+      </div>
+
+      {preview && preview.length > 0 && (
+        <div className="card">
+          <div className="card-title">2. Apercu — {preview.length} commandes trouvees</div>
+          <div style={{maxHeight:320,overflowY:'auto',border:'1px solid var(--border)',borderRadius:8,marginBottom:16}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:'0.82rem'}}>
+              <thead>
+                <tr style={{background:'var(--bg2)'}}>
+                  <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',fontSize:'0.7rem'}}>N° Commande</th>
+                  <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',fontSize:'0.7rem'}}>Client</th>
+                  <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',fontSize:'0.7rem'}}>Delai confirme</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.map((p,i) => (
+                  <tr key={i} style={{borderTop:'1px solid var(--bg2)'}}>
+                    <td style={{padding:'7px 12px',fontFamily:'Courier New',fontWeight:700,color:'var(--navy)'}}>{p.commande}</td>
+                    <td style={{padding:'7px 12px',color:'var(--text)'}}>{p.client}</td>
+                    <td style={{padding:'7px 12px',color:'var(--muted)',fontSize:'0.78rem'}}>{p.jour ? (()=>{try{const d=new Date(p.jour+'T00:00:00');return dateLabel(d);}catch(e){return p.jour;}})() : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:10}}>
+            <button className="btn-ghost" onClick={()=>setPreview(null)}>Annuler</button>
+            <button className="btn-primary" onClick={handleSync} disabled={saving}>
+              {saving ? 'Mise a jour...' : 'Mettre a jour les clients'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Statistiques ────────────────────────────────────────────────────────────
 function Statistiques() {
   const [all, setAll] = useState([]);
@@ -1506,6 +1628,7 @@ const TABS = [
   {id:'livreur',    label:'🚚 Livreur',    roles:['responsable','livreur']},
   {id:'historique', label:'📂 Historique', roles:['adv','responsable','livreur']},
   {id:'stats',      label:'📊 Stats',      roles:['adv','responsable']},
+  {id:'extract',    label:'📥 Extract AS400', roles:['responsable']},
 ];
 const DEFAULT_TAB = {adv:'agenda',responsable:'tournees',livreur:'livreur'};
 
@@ -1534,6 +1657,7 @@ function AppInner() {
       {page==='livreur'    && <Livreur/>}
       {page==='historique' && <Historique/>}
       {page==='stats'      && <Statistiques/>}
+      {page==='extract'    && <ExtractAS400/>}
     </>
   );
 }
