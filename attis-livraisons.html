@@ -457,6 +457,7 @@ function Agenda() {
   };
 
   const jours = getJoursOuvres();
+  const agendaDays = filtreJour ? jours.filter(function(d){return dateKey(d)===filtreJour;}) : jours;
   const livDeliveries = filtreLivreur ? deliveries.filter(d=>d.tournee===filtreLivreur) : deliveries;
   const grouped = {};
   jours.forEach(j => { const k=dateKey(j); grouped[k]={matin:livDeliveries.filter(d=>d.jour===k&&d.creneau==='Matin'&&d.statut!=='aplanifier'),apm:livDeliveries.filter(d=>d.jour===k&&d.creneau==='Après-midi'&&d.statut!=='aplanifier')}; grouped[k].total=grouped[k].matin.length+grouped[k].apm.length; });
