@@ -428,6 +428,7 @@ function Agenda() {
   const [loading,setLoading] = useState(true);
   const [editModal,setEditModal] = useState(null);
   const [filtreLivreur,setFiltreLivreur] = useState('');
+  const [filtreJour,setFiltreJour] = useState('');
   const [searchNum,setSearchNum] = useState('');
   const [searchResult,setSearchResult] = useState(null);
   const [searchDone,setSearchDone] = useState(false);
@@ -508,8 +509,19 @@ function Agenda() {
         )}
       </div>
       <div className="card" style={{marginBottom:16,padding:'12px 16px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}>
+          <span style={{fontSize:'0.73rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Jour :</span>
+          <button onClick={()=>setFiltreJour('')} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreJour===''?'var(--navy)':'white',color:filtreJour===''?'white':'var(--muted)',fontSize:'0.78rem',fontWeight:700}}>Tous</button>
+          {getJoursOuvres().map(d=>{
+            const k=dateKey(d);
+            const b=dateBadge(d);
+            return <button key={k} onClick={()=>setFiltreJour(filtreJour===k?'':k)} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreJour===k?'var(--navy)':'white',color:filtreJour===k?'white':'var(--text)',fontSize:'0.78rem',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+              {dateLabelCourt(d)}{b&&<span style={{fontSize:'0.6rem',background:b.color,color:'white',borderRadius:3,padding:'0 4px',fontWeight:800}}>{b.text}</span>}
+            </button>;
+          })}
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-          <span style={{fontSize:'0.73rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Filtrer par livreur :</span>
+          <span style={{fontSize:'0.73rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Livreur :</span>
           <button onClick={()=>setFiltreLivreur('')} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreLivreur===''?'var(--navy)':'white',color:filtreLivreur===''?'white':'var(--muted)',fontSize:'0.78rem',fontWeight:700}}>Tous</button>
           {LIVREURS.map(l=><button key={l} onClick={()=>setFiltreLivreur(filtreLivreur===l?'':l)} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreLivreur===l?'var(--navy)':'white',color:filtreLivreur===l?'white':'var(--text)',fontSize:'0.78rem',fontWeight:600}}>{l}</button>)}
         </div>
@@ -532,10 +544,10 @@ function Agenda() {
               {g.total===0?<div className="agenda-empty-slot">—</div>:(
                 <div className="agenda-slots">
                   <div className="agenda-creneau-label agenda-label-matin"><SunIcon/> Matin</div>
-                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}}</div></div>)}
+                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
                   <div className="agenda-divider"/>
                   <div className="agenda-creneau-label agenda-label-apm"><MoonIcon/> Après-midi</div>
-                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}}</div></div>)}
+                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
                 </div>
               )}
             </div>
