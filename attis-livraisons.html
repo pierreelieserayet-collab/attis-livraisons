@@ -111,7 +111,7 @@ input::placeholder{color:#b0bbd4}
 .sig-hint{font-size:0.82rem;color:var(--muted);margin-bottom:14px}
 .sig-box{border:2px dashed var(--border);border-radius:8px;overflow:hidden;background:#fafbfd;margin-bottom:16px}
 .sig-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.agenda-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.agenda-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 @media(max-width:900px){.agenda-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:520px){.agenda-grid{grid-template-columns:repeat(2,1fr)}}
 .agenda-col{background:white;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
@@ -123,18 +123,18 @@ input::placeholder{color:#b0bbd4}
 .agenda-day-date{color:rgba(255,255,255,0.65);font-size:0.7rem}
 .agenda-day-badge{display:inline-block;font-size:0.62rem;padding:1px 6px;border-radius:4px;font-weight:800;margin-top:2px}
 .agenda-empty-slot{padding:28px 12px;text-align:center;color:#c0cce0;font-size:1.3rem;flex:1;display:flex;align-items:center;justify-content:center}
-.agenda-slots{padding:10px 10px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
-.agenda-creneau-label{display:flex;align-items:center;gap:5px;font-size:0.67rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px}
+.agenda-slots{padding:6px 6px 8px;display:flex;flex-direction:column;gap:2px;flex:1}
+.agenda-creneau-label{display:flex;align-items:center;gap:3px;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:1px}
 .agenda-label-matin{color:var(--sun)}
 .agenda-label-apm{color:var(--moon)}
-.agenda-no-delivery{font-size:0.73rem;color:#c0cce0;padding:2px 0 4px 2px;font-style:italic}
-.agenda-divider{height:1px;background:var(--bg2);margin:6px 0}
-.agenda-card{border-radius:6px;padding:6px 8px;border-left:3px solid transparent;display:flex;flex-direction:column;gap:4px}
-.agenda-card-aplanifier{background:#f5f3ff;border-left-color:#7c3aed}
-.agenda-card-planifiee{background:#eff6ff;border-left-color:#2563eb}
-.agenda-card-confirmee{background:#fffbeb;border-left-color:#d97706}
-.agenda-card-livree{background:#f0fdf4;border-left-color:#16a34a}
-.agenda-cmd{font-family:'Courier New',monospace;font-size:0.76rem;font-weight:700;color:var(--navy)}
+.agenda-no-delivery{font-size:0.65rem;color:#c0cce0;padding:1px 0 2px 2px;font-style:italic}
+.agenda-divider{height:1px;background:var(--bg2);margin:3px 0}
+.agenda-card{border-radius:4px;padding:3px 6px;border-left:2px solid transparent;display:flex;flex-direction:column;gap:2px}
+.agenda-card-aplanifier{background:#ede9fe;border-left-color:#7c3aed}
+.agenda-card-planifiee{background:#dbeafe;border-left-color:#2563eb}
+.agenda-card-confirmee{background:#fef3c7;border-left-color:#d97706}
+.agenda-card-livree{background:#dcfce7;border-left-color:#16a34a}
+.agenda-cmd{font-family:'Courier New',monospace;font-size:0.68rem;font-weight:700;color:var(--navy)}
 .login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0e1d4a 0%,#1a2d6b 50%,#213580 100%);padding:20px}
 .login-card{background:white;border-radius:16px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.35);display:flex;flex-direction:column;align-items:center}
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
@@ -177,8 +177,8 @@ const getLivraisonByCommande = async (commande) => { const {data,error} = await 
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const GROUPS = {
-  ADV:   {role:'adv',        label:'ADV',                     pages:['suivi','agenda']},
-  WICKY: {role:'responsable',label:'Responsable des tournées', pages:['suivi','agenda','tournees','livreur']},
+  ADV:   {role:'adv',        label:'ADV',                     pages:['agenda']},
+  WICKY: {role:'responsable',label:'Responsable des tournées', pages:['agenda','tournees','livreur']},
   ROUTE: {role:'livreur',    label:'Livreur',                  pages:['livreur']},
 };
 const AuthCtx = createContext(null);
@@ -427,6 +427,24 @@ function Agenda() {
   const [deliveries,setDeliveries] = useState([]);
   const [loading,setLoading] = useState(true);
   const [editModal,setEditModal] = useState(null);
+  const [filtreLivreur,setFiltreLivreur] = useState('');
+  const [searchNum,setSearchNum] = useState('');
+  const [searchResult,setSearchResult] = useState(null);
+  const [searchDone,setSearchDone] = useState(false);
+
+  const handleSearch = async () => {
+    if(!searchNum.trim()) return;
+    setLoading(false);
+    const found = deliveries.find(d => d.commande === searchNum.trim().toUpperCase());
+    if(found) { setSearchResult(found); }
+    else {
+      try {
+        const data = await getLivraisonByCommande(searchNum.trim());
+        setSearchResult(data[0]||null);
+      } catch(e) { setSearchResult(null); }
+    }
+    setSearchDone(true);
+  };
   useEffect(()=>{ getLivraisons().then(setDeliveries).catch(console.error).finally(()=>setLoading(false)); },[]);
 
   const handleDecaler = async (jour, creneau, tournee) => {
@@ -438,22 +456,62 @@ function Agenda() {
   };
 
   const jours = getJoursOuvres();
+  const livDeliveries = filtreLivreur ? deliveries.filter(d=>d.tournee===filtreLivreur) : deliveries;
   const grouped = {};
-  jours.forEach(j => { const k=dateKey(j); grouped[k]={matin:deliveries.filter(d=>d.jour===k&&d.creneau==='Matin'&&d.statut!=='aplanifier'),apm:deliveries.filter(d=>d.jour===k&&d.creneau==='Après-midi'&&d.statut!=='aplanifier')}; grouped[k].total=grouped[k].matin.length+grouped[k].apm.length; });
+  jours.forEach(j => { const k=dateKey(j); grouped[k]={matin:livDeliveries.filter(d=>d.jour===k&&d.creneau==='Matin'&&d.statut!=='aplanifier'),apm:livDeliveries.filter(d=>d.jour===k&&d.creneau==='Après-midi'&&d.statut!=='aplanifier')}; grouped[k].total=grouped[k].matin.length+grouped[k].apm.length; });
 
   const counts = {aplanifier:0,planifiee:0,confirmee:0,livree:0};
-  deliveries.forEach(d=>{if(counts[d.statut]!==undefined)counts[d.statut]++;});
+  livDeliveries.forEach(d=>{if(counts[d.statut]!==undefined)counts[d.statut]++;});
 
   if(loading)return <div className="loading">Chargement…</div>;
   return (
     <div className="page page-agenda">
-      <div className="page-hero">
-        <h2>📅 Agenda de la semaine</h2><p>Vue d ensemble du planning de livraison</p>
-        <div className="hero-stats">
-          <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
-          <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
-          <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livrée{counts.livree>1?'s':''}</span>
-          <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {deliveries.length}</span>
+      <div style={{background:'linear-gradient(135deg,var(--navy) 70%,var(--navy-mid))',borderRadius:'var(--radius)',padding:'14px 20px',marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,marginBottom:10}}>
+          <h2 style={{fontSize:'1.1rem',fontWeight:700,color:'white'}}>📅 Agenda de la semaine</h2>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+            <span className="hstat" style={{color:'#c4b5fd'}}>🟣 {counts.aplanifier||0} a planifier</span>
+            <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiee{counts.planifiee>1?'s':''}</span>
+            <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} chargee{counts.confirmee>1?'s':''}</span>
+            <span className="hstat" style={{color:'#86efac'}}>🟢 {counts.livree} livree{counts.livree>1?'s':''}</span>
+            <span className="hstat" style={{color:'rgba(255,255,255,0.5)'}}>Total : {deliveries.length}</span>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <input
+            value={searchNum}
+            onChange={e=>{setSearchNum(e.target.value);setSearchDone(false);setSearchResult(null);}}
+            onKeyDown={e=>e.key==='Enter'&&handleSearch()}
+            placeholder="Rechercher une commande..."
+            style={{flex:1,padding:'7px 12px',borderRadius:8,border:'none',background:'rgba(255,255,255,0.15)',color:'white',fontFamily:'Courier New',fontSize:'0.88rem',fontWeight:700,outline:'none'}}
+          />
+          <button onClick={handleSearch} style={{padding:'7px 14px',borderRadius:8,border:'none',cursor:'pointer',background:'var(--gold)',color:'#122057',fontFamily:'inherit',fontSize:'0.82rem',fontWeight:700,whiteSpace:'nowrap'}}>
+            Rechercher
+          </button>
+          {searchDone&&<button onClick={()=>{setSearchNum('');setSearchDone(false);setSearchResult(null);}} style={{padding:'7px 10px',borderRadius:8,border:'none',cursor:'pointer',background:'rgba(255,255,255,0.1)',color:'white',fontSize:'0.78rem'}}>✕</button>}
+        </div>
+        {searchDone && (
+          <div style={{marginTop:10,padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.12)',fontSize:'0.82rem',color:'white'}}>
+            {searchResult ? (
+              <span>
+                <strong style={{fontFamily:'Courier New'}}>{searchResult.commande}</strong>
+                {searchResult.client&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:8}}>{searchResult.client}</span>}
+                <span style={{marginLeft:8,padding:'2px 8px',borderRadius:10,fontSize:'0.75rem',fontWeight:700,background:STATUS[searchResult.statut]?STATUS[searchResult.statut].bg:'#eff6ff',color:STATUS[searchResult.statut]?STATUS[searchResult.statut].color:'#2563eb'}}>{STATUS[searchResult.statut]?STATUS[searchResult.statut].label:'?'}</span>
+                {searchResult.jour&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:8}}>{(()=>{try{const d=new Date(searchResult.jour+'T00:00:00');return dateLabel(d);}catch(e){return searchResult.jour;}})()}</span>}
+                {searchResult.creneau&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:6}}>{searchResult.creneau}</span>}
+                {searchResult.tournee&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:6}}>— {searchResult.tournee}</span>}
+              </span>
+            ) : (
+              <span style={{color:'rgba(255,255,255,0.6)'}}>Commande introuvable.</span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="card" style={{marginBottom:16,padding:'12px 16px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+          <span style={{fontSize:'0.73rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Filtrer par livreur :</span>
+          <button onClick={()=>setFiltreLivreur('')} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreLivreur===''?'var(--navy)':'white',color:filtreLivreur===''?'white':'var(--muted)',fontSize:'0.78rem',fontWeight:700}}>Tous</button>
+          {LIVREURS.map(l=><button key={l} onClick={()=>setFiltreLivreur(filtreLivreur===l?'':l)} style={{padding:'4px 12px',borderRadius:20,border:'1.5px solid var(--border)',cursor:'pointer',background:filtreLivreur===l?'var(--navy)':'white',color:filtreLivreur===l?'white':'var(--text)',fontSize:'0.78rem',fontWeight:600}}>{l}</button>)}
         </div>
       </div>
       <div className="agenda-grid">
@@ -474,10 +532,10 @@ function Agenda() {
               {g.total===0?<div className="agenda-empty-slot">—</div>:(
                 <div className="agenda-slots">
                   <div className="agenda-creneau-label agenda-label-matin"><SunIcon/> Matin</div>
-                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><StatusBadge s={d.statut}/>{d.tournee&&<span style={{fontSize:'0.65rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
+                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>{d.tournee&&<span style={{fontSize:'0.65rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
                   <div className="agenda-divider"/>
                   <div className="agenda-creneau-label agenda-label-apm"><MoonIcon/> Après-midi</div>
-                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><StatusBadge s={d.statut}/>{d.tournee&&<span style={{fontSize:'0.65rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
+                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>{d.tournee&&<span style={{fontSize:'0.65rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
                 </div>
               )}
             </div>
@@ -1290,13 +1348,12 @@ function Historique() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 const TABS = [
-  {id:'suivi',      label:'🔍 Suivi',      roles:['adv','responsable']},
   {id:'agenda',     label:'📅 Agenda',     roles:['adv','responsable']},
   {id:'tournees',   label:'📋 Tournées',   roles:['responsable']},
   {id:'livreur',    label:'🚚 Livreur',    roles:['responsable','livreur']},
   {id:'historique', label:'📂 Historique', roles:['adv','responsable','livreur']},
 ];
-const DEFAULT_TAB = {adv:'suivi',responsable:'tournees',livreur:'livreur'};
+const DEFAULT_TAB = {adv:'agenda',responsable:'tournees',livreur:'livreur'};
 
 function AppInner() {
   const {session,logout} = useAuth();
@@ -1317,7 +1374,7 @@ function AppInner() {
           <button className="btn-logout" onClick={logout}>⬆ Déconnexion</button>
         </div>
       </nav>
-      {page==='suivi'    && <Suivi/>}
+
       {page==='agenda'   && <Agenda/>}
       {page==='tournees' && <Tournees/>}
       {page==='livreur'    && <Livreur/>}
