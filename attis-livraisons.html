@@ -215,7 +215,7 @@ function dateKey(date) {
 function dateBadge(date) {
   const auj = new Date(); auj.setHours(0,0,0,0);
   const dem = new Date(auj); dem.setDate(auj.getDate()+1);
-  if(date.getTime()===auj.getTime()) return {text:"Aujourd'hui", color:'#e8a030'};
+  if(date.getTime()===auj.getTime()) return {text:"Aujourd hui", color:'#e8a030'};
   if(date.getTime()===dem.getTime()) return {text:'Demain', color:'#2563eb'};
   return null;
 }
@@ -305,8 +305,8 @@ function Login() {
         <div className="login-divider"/>
         <div className="login-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
         <h2 className="login-title">Accès sécurisé</h2>
-        <p className="login-sub">Saisissez votre code d'accès pour continuer</p>
-        <input className={`login-input ${error?'login-input-error':''}`} placeholder="Code d'accès" value={code} onChange={e=>{setCode(e.target.value);setError(false);}} onKeyDown={e=>e.key==='Enter'&&handleLogin()} autoFocus autoComplete="off"/>
+        <p className="login-sub">Saisissez votre code acces pour continuer</p>
+        <input className={`login-input ${error?'login-input-error':''}`} placeholder="Code acces" value={code} onChange={e=>{setCode(e.target.value);setError(false);}} onKeyDown={e=>e.key==='Enter'&&handleLogin()} autoFocus autoComplete="off"/>
         {error&&<div className="login-error">Code incorrect. Veuillez réessayer.</div>}
         <button className="btn-login" onClick={handleLogin}>Se connecter</button>
       </div>
@@ -363,11 +363,79 @@ function Suivi() {
   );
 }
 
+// ── Modal Decaler ────────────────────────────────────────────────────────────
+function DecalerModal({ commande, onConfirm, onCancel }) {
+  const [jour, setJour] = useState(commande.jour);
+  const [creneau, setCreneau] = useState(commande.creneau);
+  const [tournee, setTournee] = useState(commande.tournee||'');
+  const jours = getJoursOuvres();
+
+  const handleConfirm = () => {
+    if(!jour || !creneau) { alert('Choisissez un jour et un creneau.'); return; }
+    onConfirm(jour, creneau, tournee);
+  };
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="modal" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4}}>Modifier la commande</div>
+          <div style={{fontFamily:'Courier New',fontSize:'1.1rem',fontWeight:700,color:'var(--navy)'}}>{commande.commande}</div>
+          {commande.client && <div style={{fontSize:'0.82rem',color:'var(--muted)',marginTop:2}}>{commande.client}</div>}
+        </div>
+        <div className="field" style={{marginBottom:14}}>
+          <label>Jour de livraison</label>
+          <div className="toggle-group">
+            {jours.map(d=>{
+              const k=dateKey(d);
+              const b=dateBadge(d);
+              return (
+                <button key={k} className={'toggle-btn '+(jour===k?'active':'')} onClick={()=>setJour(k)} style={{flexDirection:'column',gap:2,padding:'7px 10px',minWidth:72}}>
+                  <span style={{fontSize:'0.78rem',fontWeight:700}}>{dateLabelCourt(d)}</span>
+                  {b&&<span style={{fontSize:'0.6rem',background:jour===k?'rgba(255,255,255,0.3)':b.color,color:'white',borderRadius:4,padding:'1px 5px',fontWeight:800}}>{b.text}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="field" style={{marginBottom:14}}>
+          <label>Creneau</label>
+          <div className="toggle-group">
+            <button className={'toggle-btn '+(creneau==='Matin'?'active':'')} onClick={()=>setCreneau('Matin')}>Matin</button>
+            <button className={'toggle-btn '+(creneau==='Après-midi'?'active':'')} onClick={()=>setCreneau('Après-midi')}>Apres-midi</button>
+          </div>
+        </div>
+        <div className="field" style={{marginBottom:20}}>
+          <label>Livreur</label>
+          <div className="toggle-group" style={{flexWrap:'wrap'}}>
+            {LIVREURS.map(l=>(
+              <button key={l} className={'toggle-btn '+(tournee===l?'active':'')} onClick={()=>setTournee(l)}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="modal-btns">
+          <button className="btn-ghost" onClick={onCancel}>Annuler</button>
+          <button className="btn-primary" onClick={handleConfirm}>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Agenda ────────────────────────────────────────────────────────────────────
 function Agenda() {
   const [deliveries,setDeliveries] = useState([]);
   const [loading,setLoading] = useState(true);
+  const [editModal,setEditModal] = useState(null);
   useEffect(()=>{ getLivraisons().then(setDeliveries).catch(console.error).finally(()=>setLoading(false)); },[]);
+
+  const handleDecaler = async (jour, creneau, tournee) => {
+    try {
+      const updated = await updateLivraison(editModal.id, {jour, creneau, tournee});
+      setDeliveries(prev => prev.map(x => x.id===editModal.id ? updated : x));
+      setEditModal(null);
+    } catch(e) { console.error(e); }
+  };
 
   const jours = getJoursOuvres();
   const grouped = {};
@@ -380,7 +448,7 @@ function Agenda() {
   return (
     <div className="page page-agenda">
       <div className="page-hero">
-        <h2>📅 Agenda de la semaine</h2><p>Vue d'ensemble du planning de livraison</p>
+        <h2>📅 Agenda de la semaine</h2><p>Vue d ensemble du planning de livraison</p>
         <div className="hero-stats">
           <span className="hstat" style={{color:'#93c5fd'}}>🔵 {counts.planifiee} planifiée{counts.planifiee>1?'s':''}</span>
           <span className="hstat" style={{color:'#fcd34d'}}>🟡 {counts.confirmee} confirmée{counts.confirmee>1?'s':''}</span>
@@ -406,10 +474,10 @@ function Agenda() {
               {g.total===0?<div className="agenda-empty-slot">—</div>:(
                 <div className="agenda-slots">
                   <div className="agenda-creneau-label agenda-label-matin"><SunIcon/> Matin</div>
-                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={`agenda-card agenda-card-${d.statut}`}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/></div>)}
+                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div>)}
                   <div className="agenda-divider"/>
                   <div className="agenda-creneau-label agenda-label-apm"><MoonIcon/> Après-midi</div>
-                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={`agenda-card agenda-card-${d.statut}`}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/></div>)}
+                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><span className="agenda-cmd">{d.commande}</span><StatusBadge s={d.statut}/>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div>)}
                 </div>
               )}
             </div>
@@ -595,7 +663,7 @@ function BulkDelete({ deliveries, onDeleted }) {
       {confirm && (
         <div className="overlay" onClick={() => setConfirm(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <p>Supprimer les {countByStatut(confirm)} commande{countByStatut(confirm)>1?'s':''} avec le statut <strong>{STATUTS.find(s=>s.key===confirm)?.label}</strong> ?</p>
+            <p>Supprimer les {countByStatut(confirm)} commande{countByStatut(confirm)>1?'s':''} avec le statut <strong>{STATUTS.find(s=>s.key===confirm) ? (STATUTS.find(s=>s.key===confirm).label) : ''}</strong> ?</p>
             <p style={{fontSize:'0.82rem',color:'var(--muted)',marginBottom:18}}>Cette action est irréversible.</p>
             <div className="modal-btns">
               <button className="btn-ghost" onClick={() => setConfirm(null)}>Annuler</button>
@@ -616,118 +684,103 @@ function PlanifierEnMasse({ deliveries, onPlanifie }) {
   const [tournee, setTournee] = useState('');
   const [numeros, setNumeros] = useState('');
   const [saving, setSaving] = useState(false);
-  const [result, setResult] = useState(null);
-
+  const [res, setRes] = useState(null);
   const jours = getJoursOuvres();
 
+  const reset = () => { setOpen(false); setJour(''); setCreneau(''); setTournee(''); setNumeros(''); setRes(null); };
+
   const handleSave = async () => {
-    if(!jour || !creneau || !tournee) { alert('Veuillez choisir un jour, un créneau et une tournée.'); return; }
-    const lines = numeros.split(/[
-,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
-    if(lines.length === 0) { alert('Veuillez saisir au moins un numéro de commande.'); return; }
+    if(!jour || !creneau || !tournee) { alert('Choisissez un jour, un creneau et un livreur.'); return; }
+    const nums = numeros.split(/[\n,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+    if(nums.length === 0) { alert('Saisissez au moins un numero.'); return; }
     setSaving(true);
-    let ok = 0, notFound = [], alreadyDone = [];
+    let ok = 0, nf = [], ad = [];
     try {
-      for(const num of lines) {
-        const existing = deliveries.find(d => d.commande === num);
-        if(!existing) { notFound.push(num); continue; }
-        if(existing.statut !== 'aplanifier') { alreadyDone.push(num); continue; }
-        const updated = await updateLivraison(existing.id, {statut:'planifiee', jour, creneau, tournee});
-        onPlanifie(updated);
+      for(const num of nums) {
+        const ex = deliveries.find(d => d.commande === num);
+        if(!ex) {
+          const created = await addLivraison({commande:num, jour, creneau, tournee, statut:'planifiee'});
+          onPlanifie(created);
+          ok++;
+          continue;
+        }
+        if(ex.statut !== 'aplanifier') { ad.push(num); continue; }
+        const up = await updateLivraison(ex.id, {statut:'planifiee', jour, creneau, tournee});
+        onPlanifie(up);
         ok++;
       }
-      setResult({ok, notFound, alreadyDone});
+      setRes({ok, nf, ad});
       setNumeros('');
-    } catch(e) { alert('Erreur : ' + e.message); }
-    finally { setSaving(false); }
+    } catch(e) { alert('Erreur: ' + e.message); }
+    setSaving(false);
   };
-
-  const reset = () => { setOpen(false); setJour(''); setCreneau(''); setTournee(''); setNumeros(''); setResult(null); };
 
   if(!open) return (
     <div style={{marginBottom:24}}>
-      <button className="btn-primary" style={{background:'#7c3aed',width:'100%',padding:14,fontSize:'0.95rem'}} onClick={()=>setOpen(true)}>
-        📋 Planifier une tournée complète
+      <button onClick={() => setOpen(true)} style={{width:'100%',padding:14,fontSize:'0.95rem',borderRadius:8,border:'none',cursor:'pointer',background:'#7c3aed',color:'white',fontFamily:'inherit',fontWeight:700}}>
+        Planifier une tournee complete
       </button>
+    </div>
+  );
+
+  if(res) return (
+    <div className="card form-card" style={{borderLeft:'4px solid #7c3aed',marginBottom:24}}>
+      <div className="flash flash-ok" style={{marginBottom:12}}>{res.ok} commande{res.ok > 1 ? 's' : ''} planifiee{res.ok > 1 ? 's' : ''}</div>
+      {res.nf.length > 0 && <div className="flash flash-error" style={{marginBottom:8}}>Introuvables: {res.nf.join(', ')}</div>}
+      {res.ad.length > 0 && <div style={{padding:'8px 12px',background:'#fef3c7',borderRadius:8,fontSize:'0.82rem',color:'#92400e',marginBottom:8}}>Deja planifiees: {res.ad.join(', ')}</div>}
+      <div style={{display:'flex',gap:10,marginTop:8}}>
+        <button className="btn-primary" onClick={() => setRes(null)}>Continuer</button>
+        <button className="btn-ghost" onClick={reset}>Fermer</button>
+      </div>
     </div>
   );
 
   return (
     <div className="card form-card" style={{borderLeft:'4px solid #7c3aed',marginBottom:24}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-        <div className="card-title" style={{marginBottom:0}}>📋 Planifier une tournée complète</div>
-        <button className="btn-ghost" style={{padding:'4px 10px',fontSize:'0.8rem'}} onClick={reset}>✕ Fermer</button>
+        <div className="card-title" style={{marginBottom:0}}>Planifier une tournee complete</div>
+        <button className="btn-ghost" style={{padding:'4px 10px',fontSize:'0.8rem'}} onClick={reset}>Fermer</button>
       </div>
-
-      {result ? (
-        <div>
-          <div className="flash flash-ok" style={{marginBottom:12}}>✓ {result.ok} commande{result.ok>1?'s':''} planifiée{result.ok>1?'s':''}</div>
-          {result.notFound.length>0 && <div className="flash flash-error" style={{marginBottom:8}}>Introuvables : {result.notFound.join(', ')}</div>}
-          {result.alreadyDone.length>0 && <div style={{padding:'8px 12px',background:'#fef3c7',borderRadius:8,fontSize:'0.82rem',color:'#92400e',marginBottom:8}}>Déjà planifiées : {result.alreadyDone.join(', ')}</div>}
-          <button className="btn-primary" style={{marginTop:8}} onClick={()=>setResult(null)}>Planifier d'autres commandes</button>
+      <div className="field" style={{marginBottom:14}}>
+        <label>Jour</label>
+        <div className="toggle-group">
+          {jours.map(d => {
+            const k = dateKey(d);
+            const b = dateBadge(d);
+            return (
+              <button key={k} className={'toggle-btn ' + (jour===k ? 'active' : '')} onClick={() => setJour(k)} style={{flexDirection:'column',gap:2,padding:'7px 10px',minWidth:72}}>
+                <span style={{fontSize:'0.78rem',fontWeight:700}}>{dateLabelCourt(d)}</span>
+                {b && <span style={{fontSize:'0.6rem',background:jour===k?'rgba(255,255,255,0.3)':b.color,color:'white',borderRadius:4,padding:'1px 5px',fontWeight:800}}>{b.text}</span>}
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <>
-          <div className="form-grid" style={{marginBottom:16}}>
-            <div className="field">
-              <label>Jour de livraison</label>
-              <div className="toggle-group">
-                {jours.map(d => {
-                  const k = dateKey(d);
-                  const badge = dateBadge(d);
-                  return (
-                    <button key={k} className={'toggle-btn ' + (jour===k?'active':'')} onClick={()=>setJour(k)} style={{flexDirection:'column',gap:2,padding:'7px 10px',minWidth:72}}>
-                      <span style={{fontSize:'0.78rem',fontWeight:700}}>{dateLabelCourt(d)}</span>
-                      {badge&&<span style={{fontSize:'0.6rem',background:jour===k?'rgba(255,255,255,0.3)':badge.color,color:'white',borderRadius:4,padding:'1px 5px',fontWeight:800}}>{badge.text}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="field">
-              <label>Créneau</label>
-              <div className="toggle-group">
-                <button className={'toggle-btn ' + (creneau==='Matin'?'active':'')} onClick={()=>setCreneau('Matin')}>☀️ Matin</button>
-                <button className={'toggle-btn ' + (creneau==='Après-midi'?'active':'')} onClick={()=>setCreneau('Après-midi')}>🌙 Après-midi</button>
-              </div>
-            </div>
-            <div className="field">
-              <label>Tournée (livreur)</label>
-              <div className="toggle-group" style={{flexWrap:'wrap'}}>
-                {LIVREURS.map(l => (
-                  <button key={l} className={'toggle-btn ' + (tournee===l?'active':'')} onClick={()=>setTournee(l)}>{l}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="field" style={{marginBottom:16}}>
-            <label>Numéros de commande</label>
-            <textarea
-              value={numeros}
-              onChange={e=>setNumeros(e.target.value)}
-              placeholder={'Collez ou saisissez les numéros, un par ligne ou séparés par des virgules :
-194405
-194781
-198858'}
-              style={{width:'100%',minHeight:140,padding:'10px 12px',borderRadius:8,border:'1.5px solid var(--border)',background:'var(--bg)',fontFamily:'Courier New',fontSize:'0.9rem',resize:'vertical',outline:'none',color:'var(--navy)'}}
-            />
-            <div style={{fontSize:'0.75rem',color:'var(--muted)',marginTop:4}}>
-              {numeros.split(/[
-,;]+/).filter(s=>s.trim()).length} numéro{numeros.split(/[
-,;]+/).filter(s=>s.trim()).length>1?'s':''} saisi{numeros.split(/[
-,;]+/).filter(s=>s.trim()).length>1?'s':''}
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button className="btn-ghost" onClick={reset}>Annuler</button>
-            <button className="btn-primary" style={{background:'#7c3aed'}} onClick={handleSave} disabled={saving}>
-              {saving ? 'Planification...' : 'Planifier toutes ces commandes'}
-            </button>
-          </div>
-        </>
-      )}
+      </div>
+      <div className="field" style={{marginBottom:14}}>
+        <label>Creneau</label>
+        <div className="toggle-group">
+          <button className={'toggle-btn ' + (creneau==='Matin' ? 'active' : '')} onClick={() => setCreneau('Matin')}>Matin</button>
+          <button className={'toggle-btn ' + (creneau==='Après-midi' ? 'active' : '')} onClick={() => setCreneau('Après-midi')}>Apres-midi</button>
+        </div>
+      </div>
+      <div className="field" style={{marginBottom:14}}>
+        <label>Livreur</label>
+        <div className="toggle-group" style={{flexWrap:'wrap'}}>
+          {LIVREURS.map(l => (
+            <button key={l} className={'toggle-btn ' + (tournee===l ? 'active' : '')} onClick={() => setTournee(l)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="field" style={{marginBottom:16}}>
+        <label>Numeros de commande (un par ligne)</label>
+        <textarea value={numeros} onChange={e => setNumeros(e.target.value)} style={{width:'100%',minHeight:140,padding:'10px 12px',borderRadius:8,border:'1.5px solid #d0d8ef',background:'#f4f6fb',fontFamily:'Courier New',fontSize:'0.9rem',resize:'vertical',outline:'none',color:'#1a2d6b'}} />
+      </div>
+      <div style={{display:'flex',justifyContent:'flex-end',gap:10}}>
+        <button className="btn-ghost" onClick={reset}>Annuler</button>
+        <button onClick={handleSave} disabled={saving} style={{padding:'10px 22px',borderRadius:8,border:'none',cursor:'pointer',background:'#7c3aed',color:'white',fontFamily:'inherit',fontSize:'0.9rem',fontWeight:700}}>
+          {saving ? 'En cours...' : 'Planifier'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -850,12 +903,7 @@ function Tournees() {
       </div>
       {flash&&<div className={`flash flash-${flash.type}`}>{flash.msg}</div>}
 
-      {/* Planifier en masse */}
-      <PlanifierEnMasse
-        deliveries={deliveries}
-        onPlanifie={(updated) => setDeliveries(prev => prev.map(x => x.id===updated.id ? updated : x))}
-      />
-
+      <PlanifierEnMasse deliveries={deliveries} onPlanifie={updated => setDeliveries(prev => prev.map(x => x.id===updated.id ? updated : x))} />
       {/* Import AS400 */}
       <ImportAS400 deliveries={deliveries} onImport={(nouvelles) => { setDeliveries(prev => [...nouvelles, ...prev]); showFlash('ok', nouvelles.length + ' commande' + (nouvelles.length>1?'s':'') + ' importée' + (nouvelles.length>1?'s':'') + ' ✓'); }} />
 
@@ -1053,15 +1101,15 @@ function Livreur() {
       {loading && <div className="loading">Chargement…</div>}
 
       {!loading && allDeliveries.length===0 && (
-        <div className="empty">Aucune commande pour votre tournée aujourd'hui.</div>
+        <div className="empty">Aucune commande pour votre tournee aujourd hui.</div>
       )}
 
       {!loading && allDeliveries.length>0 && (
         <div className="planning-wrap">
           {/* Commandes du jour */}
-          {(deliveries.duJour||[]).length>0 && <div className="day-label" style={{borderRadius:'var(--radius)',marginBottom:8}}>Aujourd'hui — {formatJour(today)} <span className="day-count">{(deliveries.duJour||[]).length}</span></div>}
+          {(deliveries.duJour||[]).length>0 && <div className="day-label" style={{borderRadius:'var(--radius)',marginBottom:8}}>Aujourd hui — {formatJour(today)} <span className="day-count">{(deliveries.duJour||[]).length}</span></div>}
           {(deliveries.duJour||[]).map(d => (
-            <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${STATUS[d.statut]?.dot||'#2563eb'}`}}>
+            <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${(STATUS[d.statut] ? STATUS[d.statut].dot : '#2563eb')}`}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
                 <div>
                   <div className="result-cmd" style={{marginBottom:6}}>{d.commande}</div>
@@ -1094,14 +1142,14 @@ function Livreur() {
               )}
             </div>
           ))}
-          {/* Autres commandes (hors aujourd'hui) */}
+          {/* Autres commandes (hors aujourd hui) */}
           {(deliveries.autres||[]).length>0 && (
             <>
               <div style={{margin:'16px 0 8px',padding:'9px 16px',background:'#eaeef8',borderRadius:'var(--radius)',fontSize:'0.78rem',fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'0.07em'}}>
                 Autres jours — {(deliveries.autres||[]).length} commande{(deliveries.autres||[]).length>1?'s':''}
               </div>
               {(deliveries.autres||[]).map(d => (
-                <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${STATUS[d.statut]?.dot||'#2563eb'}`,opacity:0.85}}>
+                <div key={d.id} className="card" style={{marginBottom:12,borderLeft:`4px solid ${(STATUS[d.statut] ? STATUS[d.statut].dot : '#2563eb')}`,opacity:0.85}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
                     <div>
                       <div style={{fontSize:'0.72rem',color:'var(--muted)',fontWeight:600,marginBottom:4}}>{formatJour(d.jour)}</div>
@@ -1127,7 +1175,7 @@ function Livreur() {
 
       {showSig && (
         <SignaturePad
-          commande={allDeliveries.find(d=>d.id===showSig)?.commande}
+          commande={allDeliveries.find(d=>d.id===showSig) ? allDeliveries.find(d=>d.id===showSig).commande : ''}
           onSave={handleSignatureSave}
           onCancel={()=>setShowSig(null)}
         />
@@ -1210,7 +1258,7 @@ function Historique() {
         </div>
       </div>
 
-      {dates.length === 0 && <div className="empty">Aucune commande dans l'historique.</div>}
+      {dates.length === 0 && <div className="empty">Aucune commande dans l historique.</div>}
 
       <div className="planning-wrap">
         {dates.map(date => (
