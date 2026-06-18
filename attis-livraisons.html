@@ -171,7 +171,19 @@ const sb = createClient(
   'https://hkicyucebizazhqcvfht.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhraWN5dWNlYml6YXpocWN2Zmh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3MDM0OTMsImV4cCI6MjA5NjI3OTQ5M30.WFGPyzBzUjwQz0sFx864rUIpr_BRTGU-9dPuUFRNgBg'
 );
-const getLivraisons = async () => { const {data,error} = await sb.from('livraisons').select('*').order('created_at',{ascending:false}); if(error)throw error; return data; };
+const getLivraisons = async () => {
+  let all = [];
+  let from = 0;
+  const pageSize = 1000;
+  while(true) {
+    const {data,error} = await sb.from('livraisons').select('*').order('created_at',{ascending:false}).range(from, from+pageSize-1);
+    if(error)throw error;
+    all = all.concat(data);
+    if(data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+};
 const addLivraison = async ({commande,jour,creneau,tournee,client,statut}) => { const {data,error} = await sb.from('livraisons').insert([{commande:commande.toUpperCase(),jour,creneau,tournee:tournee||'',client:client||'',statut:statut||'planifiee'}]).select(); if(error)throw error; return data[0]; };
 const updateLivraison = async (id,updates) => { const {data,error} = await sb.from('livraisons').update(updates).eq('id',id).select(); if(error)throw error; return data[0]; };
 const deleteLivraison = async (id) => { const {error} = await sb.from('livraisons').delete().eq('id',id); if(error)throw error; };
