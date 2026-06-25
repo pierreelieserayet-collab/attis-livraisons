@@ -1557,16 +1557,15 @@ function Statistiques() {
   const matin = livrees.filter(d => d.creneau==='Matin').length;
   const apm = livrees.filter(d => d.creneau==='Après-midi').length;
 
-  // Ponctualite : compare jour livré vs délai confirmé (stocké dans la colonne jour pour les "aplanifier")
-  // livre_le = date réelle de livraison, jour = date prévue (délai confirmé)
-  const avecDelai = livrees.filter(d => d.jour && d.livre_le);
+  // Ponctualite : compare date réelle de livraison (livre_le) vs délai confirmé AS400 (delai_confirme)
+  const avecDelai = livrees.filter(d => d.delai_confirme && d.livre_le);
   const enTemps = avecDelai.filter(d => {
-    const prevu = d.jour;
+    const prevu = d.delai_confirme;
     const reel = d.livre_le ? d.livre_le.slice(0,10) : null;
     return reel && reel <= prevu;
   });
   const enRetard = avecDelai.filter(d => {
-    const prevu = d.jour;
+    const prevu = d.delai_confirme;
     const reel = d.livre_le ? d.livre_le.slice(0,10) : null;
     return reel && reel > prevu;
   });
