@@ -1112,12 +1112,14 @@ function Livreur() {
       const all = await getLivraisons();
       const mine = all.filter(d => d.tournee === nom);
       const sortFn = (a,b) => {
-        const order = {planifiee:0, confirmee:1, livree:2};
-        if(order[a.statut] !== order[b.statut]) return order[a.statut]-order[b.statut];
+        const order = {aplanifier:0, planifiee:1, confirmee:2, livree:3};
+        const oa = order[a.statut] !== undefined ? order[a.statut] : 99;
+        const ob = order[b.statut] !== undefined ? order[b.statut] : 99;
+        if(oa !== ob) return oa-ob;
         return SLOTS.indexOf(a.creneau)-SLOTS.indexOf(b.creneau);
       };
-      const duJour = mine.filter(d => d.jour === today).sort(sortFn);
-      const autres = mine.filter(d => d.jour > today).sort((a,b) => a.jour.localeCompare(b.jour) || sortFn(a,b));
+      const duJour = mine.filter(d => d.jour === today && d.statut !== 'aplanifier').sort(sortFn);
+      const autres = mine.filter(d => d.jour > today && d.statut !== 'aplanifier').sort((a,b) => a.jour.localeCompare(b.jour) || sortFn(a,b));
       setDeliveries({duJour, autres});
     } catch(e){console.error(e);}
     finally{setLoading(false);}
@@ -1256,7 +1258,7 @@ function Livreur() {
                       </div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:200}}>
-                      {d.statut==='planifiee' && <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>📦 Charger</button>}
+                      {(d.statut==='aplanifier'||d.statut==='planifiee') && <button className="btn-confirm-load" style={{padding:'10px 16px',fontSize:'0.9rem'}} onClick={()=>handleConfirmLoad(d)}>📦 Charger</button>}
                       {(d.statut==='planifiee'||d.statut==='confirmee') && <button className="btn-deliver" style={{padding:'10px 16px',fontSize:'0.9rem',marginBottom:0}} onClick={()=>setShowSig(d.id)}>✍️ Faire signer</button>}
                       {d.statut==='livree' && <div className="delivered-msg">✅ Livrée</div>}
                     </div>
