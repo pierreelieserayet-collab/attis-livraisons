@@ -216,8 +216,10 @@ const MOIS_NOMS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','o
 function getJoursOuvres() {
   const jours = [];
   const auj = new Date(); auj.setHours(0,0,0,0);
+  // J-2 jusqu'a J+2 (jours ouvrés uniquement)
   let d = new Date(auj);
-  while(jours.length < 6) {
+  d.setDate(d.getDate() - 2);
+  while(jours.length < 5) {
     if(d.getDay() !== 0 && d.getDay() !== 6) jours.push(new Date(d));
     d.setDate(d.getDate()+1);
   }
