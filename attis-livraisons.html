@@ -1682,7 +1682,6 @@ const TABS = [
   {id:'livreur',    label:'🚚 Livreur',    roles:['responsable','livreur']},
   {id:'historique', label:'📂 Historique', roles:['adv','responsable','livreur']},
   {id:'stats',      label:'📊 Stats',      roles:['adv','responsable']},
-  {id:'extract',    label:'📥 Extract AS400', roles:['responsable']},
 ];
 const DEFAULT_TAB = {adv:'agenda',responsable:'tournees',livreur:'livreur'};
 
@@ -1711,7 +1710,6 @@ function AppInner() {
       {page==='livreur'    && <Livreur/>}
       {page==='historique' && <Historique/>}
       {page==='stats'      && <Statistiques/>}
-      {page==='extract'    && <ExtractAS400/>}
     </>
   );
 }
