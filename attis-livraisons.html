@@ -999,7 +999,6 @@ function Tournees() {
 
       <PlanifierEnMasse deliveries={deliveries} onPlanifie={updated => setDeliveries(prev => prev.map(x => x.id===updated.id ? updated : x))} />
       {/* Import AS400 */}
-      <ImportAS400 deliveries={deliveries} onImport={(nouvelles) => { setDeliveries(prev => [...nouvelles, ...prev]); showFlash('ok', nouvelles.length + ' commande' + (nouvelles.length>1?'s':'') + ' importée' + (nouvelles.length>1?'s':'') + ' ✓'); }} />
 
       {/* Suppression en masse */}
       <BulkDelete deliveries={deliveries} onDeleted={(statut) => { setDeliveries(prev => prev.filter(d => d.statut !== statut)); showFlash('ok', 'Commandes supprimées ✓'); }} />
