@@ -516,14 +516,15 @@ function Agenda() {
         {searchDone && (
           <div style={{marginTop:10,padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.12)',fontSize:'0.82rem',color:'white'}}>
             {searchResult ? (
-              <span>
+              <span style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 <strong style={{fontFamily:'Courier New'}}>{searchResult.commande}</strong>
-                {searchResult.client&&<span style={{color:'white',fontWeight:600,marginLeft:8}}>{searchResult.client}</span>}
-                <span style={{marginLeft:8,padding:'2px 8px',borderRadius:10,fontSize:'0.75rem',fontWeight:700,background:STATUS[searchResult.statut]?STATUS[searchResult.statut].bg:'#eff6ff',color:STATUS[searchResult.statut]?STATUS[searchResult.statut].color:'#2563eb'}}>{STATUS[searchResult.statut]?STATUS[searchResult.statut].label:'?'}</span>
-                {searchResult.jour&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:8}}>{(()=>{try{const d=new Date(searchResult.jour+'T00:00:00');return dateLabel(d);}catch(e){return searchResult.jour;}})()}</span>}
-                {searchResult.creneau&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:6}}>{searchResult.creneau}</span>}
-                {searchResult.tournee&&<span style={{color:'rgba(255,255,255,0.7)',marginLeft:6}}>— {searchResult.tournee}</span>}
-                {searchResult.statut==='livree'&&searchResult.livre_le&&<span style={{color:'#86efac',marginLeft:8,fontWeight:700}}>— Livre le {new Date(searchResult.livre_le).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
+                {searchResult.client&&<span style={{color:'white',fontWeight:600}}>{searchResult.client}</span>}
+                <span style={{padding:'2px 8px',borderRadius:10,fontSize:'0.75rem',fontWeight:700,background:STATUS[searchResult.statut]?STATUS[searchResult.statut].bg:'#eff6ff',color:STATUS[searchResult.statut]?STATUS[searchResult.statut].color:'#2563eb'}}>{STATUS[searchResult.statut]?STATUS[searchResult.statut].label:'?'}</span>
+                {searchResult.jour&&<span style={{color:'rgba(255,255,255,0.7)'}}>{(()=>{try{const d=new Date(searchResult.jour+'T00:00:00');return dateLabel(d);}catch(e){return searchResult.jour;}})()}</span>}
+                {searchResult.creneau&&<span style={{color:'rgba(255,255,255,0.7)'}}>{searchResult.creneau}</span>}
+                {searchResult.tournee&&<span style={{color:'rgba(255,255,255,0.7)'}}>— {searchResult.tournee}</span>}
+                {searchResult.statut==='livree'&&searchResult.livre_le&&<span style={{color:'#86efac',fontWeight:700}}>— Livre le {new Date(searchResult.livre_le).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>}
+                <button onClick={()=>setEditModal(searchResult)} style={{marginLeft:4,padding:'3px 10px',borderRadius:8,border:'none',cursor:'pointer',background:'rgba(255,255,255,0.2)',color:'white',fontSize:'0.8rem',fontWeight:700}}>✎ Modifier</button>
               </span>
             ) : (
               <span style={{color:'rgba(255,255,255,0.6)'}}>Commande introuvable.</span>
