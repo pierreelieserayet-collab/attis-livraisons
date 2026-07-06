@@ -1032,6 +1032,11 @@ function Tournees() {
       <PlanifierEnMasse deliveries={deliveries} onPlanifie={updated => setDeliveries(prev => prev.map(x => x.id===updated.id ? updated : x))} />
       {/* Import AS400 */}
 
+      {/* Transfert de tournee */}
+      <TransfertTournee deliveries={deliveries} onTransfert={(ids, newLivreur) => {
+        setDeliveries(prev => prev.map(d => ids.includes(d.id) ? Object.assign({}, d, {tournee: newLivreur}) : d));
+        showFlash('ok', ids.length + ' commande' + (ids.length>1?'s':'') + ' transferee' + (ids.length>1?'s':'') + ' a ' + newLivreur + ' !');
+      }}/>
       {/* Suppression en masse */}
       <BulkDelete deliveries={deliveries} onDeleted={(statut) => { setDeliveries(prev => prev.filter(d => d.statut !== statut)); showFlash('ok', 'Commandes supprimées ✓'); }} />
       <div className="card form-card">
@@ -1530,6 +1535,92 @@ function ExtractAS400() {
             <button className="btn-ghost" onClick={()=>setPreview(null)}>Annuler</button>
             <button className="btn-primary" onClick={handleSync} disabled={saving}>
               {saving ? 'Mise a jour...' : 'Mettre a jour les clients'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Transfert Tournee ───────────────────────────────────────────────────────
+function TransfertTournee({ deliveries, onTransfert }) {
+  const [open, setOpen] = useState(false);
+  const [livreurSrc, setLivreurSrc] = useState('');
+  const [livreurDst, setLivreurDst] = useState('');
+  const [dateDebut, setDateDebut] = useState('');
+  const [dateFin, setDateFin] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const candidats = deliveries.filter(d => {
+    if(!livreurSrc || d.tournee !== livreurSrc) return false;
+    if(d.statut === 'livree') return false;
+    if(dateDebut && d.jour < dateDebut) return false;
+    if(dateFin && d.jour > dateFin) return false;
+    return true;
+  });
+
+  const handleTransfert = async () => {
+    if(!livreurSrc || !livreurDst || candidats.length === 0) return;
+    if(livreurSrc === livreurDst) { alert('Le livreur source et destination sont identiques !'); return; }
+    setSaving(true);
+    try {
+      for(const d of candidats) {
+        await updateLivraison(d.id, {tournee: livreurDst});
+      }
+      onTransfert(candidats.map(d => d.id), livreurDst);
+      setOpen(false);
+      setLivreurSrc(''); setLivreurDst(''); setDateDebut(''); setDateFin('');
+    } catch(e) { alert('Erreur : ' + e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="card" style={{marginBottom:12}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>setOpen(!open)}>
+        <div className="card-title" style={{marginBottom:0}}>🔄 Transfert de tournée</div>
+        <span style={{fontSize:'0.8rem',color:'var(--muted)'}}>{open?'▲':'▼'}</span>
+      </div>
+      {open && (
+        <div style={{marginTop:16}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+            <div>
+              <label style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',display:'block',marginBottom:4}}>Livreur source</label>
+              <select value={livreurSrc} onChange={e=>setLivreurSrc(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid var(--border)',fontSize:'0.85rem',fontFamily:'inherit'}}>
+                <option value="">-- Choisir --</option>
+                {LIVREURS.map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',display:'block',marginBottom:4}}>Livreur destination</label>
+              <select value={livreurDst} onChange={e=>setLivreurDst(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid var(--border)',fontSize:'0.85rem',fontFamily:'inherit'}}>
+                <option value="">-- Choisir --</option>
+                {LIVREURS.map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+            <div>
+              <label style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',display:'block',marginBottom:4}}>Date debut (optionnel)</label>
+              <input type="date" value={dateDebut} onChange={e=>setDateDebut(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid var(--border)',fontSize:'0.85rem',fontFamily:'inherit'}}/>
+            </div>
+            <div>
+              <label style={{fontSize:'0.75rem',fontWeight:700,color:'var(--muted)',display:'block',marginBottom:4}}>Date fin (optionnel)</label>
+              <input type="date" value={dateFin} onChange={e=>setDateFin(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid var(--border)',fontSize:'0.85rem',fontFamily:'inherit'}}/>
+            </div>
+          </div>
+          {livreurSrc && (
+            <div style={{marginBottom:12,padding:'10px 14px',background:'var(--bg2)',borderRadius:8,fontSize:'0.85rem'}}>
+              {candidats.length === 0
+                ? <span style={{color:'var(--muted)'}}>Aucune commande trouvée pour {livreurSrc}{dateDebut||dateFin?' sur cette période':''}</span>
+                : <span><strong>{candidats.length}</strong> commande{candidats.length>1?'s':''} a transférer de <strong>{livreurSrc}</strong> vers <strong>{livreurDst||'...'}</strong></span>
+              }
+            </div>
+          )}
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+            <button className="btn-ghost" onClick={()=>setOpen(false)}>Annuler</button>
+            <button className="btn-primary" onClick={handleTransfert} disabled={saving||candidats.length===0||!livreurDst}>
+              {saving?'Transfert en cours...':'Transférer ' + candidats.length + ' commande' + (candidats.length>1?'s':'')}
             </button>
           </div>
         </div>
