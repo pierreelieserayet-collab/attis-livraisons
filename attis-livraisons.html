@@ -1118,8 +1118,8 @@ function Livreur() {
         if(oa !== ob) return oa-ob;
         return SLOTS.indexOf(a.creneau)-SLOTS.indexOf(b.creneau);
       };
-      const duJour = mine.filter(d => d.jour === today && d.statut !== 'aplanifier').sort(sortFn);
-      const autres = mine.filter(d => d.jour > today && d.statut !== 'aplanifier').sort((a,b) => a.jour.localeCompare(b.jour) || sortFn(a,b));
+      const duJour = mine.filter(d => d.jour === today && d.statut !== 'aplanifier' && d.statut !== 'livree').sort(sortFn);
+      const autres = mine.filter(d => d.jour > today && d.statut !== 'aplanifier' && d.statut !== 'livree').sort((a,b) => a.jour.localeCompare(b.jour) || sortFn(a,b));
       setDeliveries({duJour, autres});
     } catch(e){console.error(e);}
     finally{setLoading(false);}
