@@ -341,6 +341,20 @@ function Suivi() {
   const [result,setResult] = useState(null);
   const [searched,setSearched] = useState(false);
   const [loading,setLoading] = useState(false);
+  const handleDragStart = (d) => { setDragging(d); };
+  const handleDragEnd = () => { setDragging(null); setDragOver(''); };
+  const handleDragOver = (e, k) => { e.preventDefault(); setDragOver(k); };
+  const handleDrop = async (e, k) => {
+    e.preventDefault();
+    setDragOver('');
+    if(!dragging || dragging.jour === k) return;
+    try {
+      await updateLivraison(dragging.id, {jour: k});
+      setDeliveries(prev => prev.map(d => d.id===dragging.id ? Object.assign({}, d, {jour:k}) : d));
+    } catch(err) { alert('Erreur : ' + err.message); }
+    setDragging(null);
+  };
+
   const handleSearch = async () => {
     if(!query.trim())return; setLoading(true);
     try { const data=await getLivraisonByCommande(query.trim()); setResult(data[0]||null); setSearched(true); } catch(e){console.error(e);} finally{setLoading(false);}
@@ -450,9 +464,25 @@ function Agenda() {
   const [editModal,setEditModal] = useState(null);
   const [filtreLivreur,setFiltreLivreur] = useState('');
   const [filtreJour,setFiltreJour] = useState('');
+  const [dragOver,setDragOver] = useState('');
+  const [dragging,setDragging] = useState(null);
   const [searchNum,setSearchNum] = useState('');
   const [searchResult,setSearchResult] = useState(null);
   const [searchDone,setSearchDone] = useState(false);
+
+  const handleDragStart = (d) => { setDragging(d); };
+  const handleDragEnd = () => { setDragging(null); setDragOver(''); };
+  const handleDragOver = (e, k) => { e.preventDefault(); setDragOver(k); };
+  const handleDrop = async (e, k) => {
+    e.preventDefault();
+    setDragOver('');
+    if(!dragging || dragging.jour === k) return;
+    try {
+      await updateLivraison(dragging.id, {jour: k});
+      setDeliveries(prev => prev.map(d => d.id===dragging.id ? Object.assign({}, d, {jour:k}) : d));
+    } catch(err) { alert('Erreur : ' + err.message); }
+    setDragging(null);
+  };
 
   const handleSearch = async () => {
     if(!searchNum.trim()) return;
@@ -553,10 +583,11 @@ function Agenda() {
       <div className="agenda-grid" style={{gridTemplateColumns:"repeat("+agendaDays.length+",1fr)"}}>
         {agendaDays.map(d => {
           const k = dateKey(d);
+          const colStyle = {transition:'background 0.15s',borderRadius:8,background:dragOver===k?'rgba(37,99,235,0.08)':'transparent'};
           const g = grouped[k]||{matin:[],apm:[],total:0};
           const badge = dateBadge(d);
           return (
-            <div key={k} className={`agenda-col ${g.total===0?'agenda-col-empty':''}`}>
+            <div key={k} className={`agenda-col ${g.total===0?'agenda-col-empty':''}`} style={colStyle} onDragOver={(e)=>{e.preventDefault();setDragOver(k);}} onDrop={(e)=>handleDrop(e,k)} onDragLeave={()=>setDragOver('')}>
               <div className="agenda-day-header">
                 <div className="agenda-day-top">
                   <span className="agenda-day-name">{JOUR_NOMS[d.getDay()].slice(0,3)} {d.getDate()}</span>
@@ -568,10 +599,10 @@ function Agenda() {
               {g.total===0?<div className="agenda-empty-slot">—</div>:(
                 <div className="agenda-slots">
                   <div className="agenda-creneau-label agenda-label-matin"><SunIcon/> Matin</div>
-                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
+                  {g.matin.length===0?<div className="agenda-no-delivery">Aucune</div>:g.matin.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} draggable={true} onDragStart={()=>handleDragStart(d)} onDragEnd={handleDragEnd} style={{cursor:'grab'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div></div>)}
                   <div className="agenda-divider"/>
                   <div className="agenda-creneau-label agenda-label-apm"><MoonIcon/> Après-midi</div>
-                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} style={{cursor:d.statut!=='livree'?'pointer':'default'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div>)}
+                  {g.apm.length===0?<div className="agenda-no-delivery">Aucune</div>:g.apm.map(d=><div key={d.id} className={'agenda-card agenda-card-'+d.statut} draggable={true} onDragStart={()=>handleDragStart(d)} onDragEnd={handleDragEnd} style={{cursor:'grab'}} onClick={()=>d.statut!=='livree'&&setEditModal(d)}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}><span className="agenda-cmd">{d.commande}</span>{d.statut!=='livree'&&<span style={{fontSize:'0.6rem',color:'#9ca3af'}}>✎</span>}</div><div style={{display:'flex',flexDirection:'column',gap:1}}>{d.client&&<span style={{fontSize:'0.6rem',color:'var(--navy)',fontWeight:600,whiteSpace:'nowrap'}}>{d.client.slice(0,20)}</span>}{d.tournee&&<span style={{fontSize:'0.6rem',color:'var(--muted)',fontWeight:600}}>{d.tournee}</span>}</div></div></div>)}
                 </div>
               )}
             </div>
