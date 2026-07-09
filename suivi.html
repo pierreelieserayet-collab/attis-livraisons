@@ -117,6 +117,13 @@ async function rechercher() {
   if (d.statut === 'livree' && d.livre_le) {
     html += '<div class="result-detail" style="color:#16a34a;margin-top:8px">✅ Livrée le : <span style="color:#16a34a">' + formatDateTime(d.livre_le) + '</span></div>';
   }
+  if (d.signature) {
+    html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb">';
+    html += '<div style="font-size:0.78rem;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Signature du destinataire</div>';
+    html += '<div style="background:#f9fafb;border-radius:8px;padding:8px;display:inline-block;border:1px solid #e5e7eb">';
+    html += '<img src="' + d.signature + '" style="max-width:260px;max-height:120px;display:block;" alt="Signature"/>';
+    html += '</div></div>';
+  }
 
   html += '</div>';
   div.innerHTML = html;
